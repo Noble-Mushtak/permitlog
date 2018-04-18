@@ -67,7 +67,7 @@ class AboutView extends StatelessWidget {
                     text: "(incompetech.com)",
                     style: this.link,
                     recognizer: new TapGestureRecognizer()
-                      ..onTap = () => launch("http://incomptech.com"),
+                      ..onTap = () => launch("http://incompetech.com"),
                   ),
                   new TextSpan(
                     text: " and licensed under Creative Commons: By Attribution 3.0.\n",
