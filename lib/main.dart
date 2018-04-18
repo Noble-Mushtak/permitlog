@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'views/about.dart';
 import 'views/home.dart';
+import 'views/log.dart';
+import 'views/supervisors.dart';
 
 /// Main function, creates a new [MaterialApp] whose home widget is [PermitLog].
 void main() {
@@ -30,15 +32,23 @@ class _PermitLogState extends State<PermitLog> {
   Widget content = new HomeView();
 
   /// Sets the [AppBar]'s title and navigates to the view indicated.
-  void navTo(String view) {
+  void _navTo(String view) {
     setState(() {
       this.title = view;
       switch(view.toLowerCase()) {
         case 'home':
           this.content = new HomeView();
           break;
+        case 'log':
+          this.content = new LogView();
+          break;
+        case 'supervisors':
+          this.content = new SupervisorsView();
+          break;
         case 'about':
           this.content = new AboutView();
+          break;
+        default:
           break;
       }
     });
@@ -62,22 +72,22 @@ class _PermitLogState extends State<PermitLog> {
               new ListTile(
                 leading: new Icon(Icons.home, color: Colors.white,),
                 title: new Text("Home", style: this.menuText,),
-                onTap: () => this.navTo("Home"),
+                onTap: () => this._navTo("Home"),
               ),
               new ListTile(
                 leading: new Icon(Icons.assignment, color: Colors.white,),
                 title: new Text("Log", style: this.menuText,),
-                onTap: () => this.navTo("Log"),
+                onTap: () => this._navTo("Log"),
               ),
               new ListTile(
                 leading: new Icon(Icons.supervisor_account, color: Colors.white,),
                 title: new Text("Supervisors", style: this.menuText,),
-                onTap: () => this.navTo("Supervisors"),
+                onTap: () => this._navTo("Supervisors"),
               ),
               new ListTile(
                 leading: new Icon(Icons.alarm, color: Colors.white,),
                 title: new Text("About", style: this.menuText,),
-                onTap: () => this.navTo("About"),
+                onTap: () => this._navTo("About"),
               ),
               new ListTile(
                 leading: new Icon(Icons.exit_to_app, color: Colors.white,),
