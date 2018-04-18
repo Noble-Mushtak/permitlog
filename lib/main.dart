@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'views/about.dart';
+import 'views/home.dart';
 
-/// Main function, creates a new [MaterialApp] 
+/// Main function, creates a new [MaterialApp] whose home widget is [PermitLog].
 void main() {
   runApp(
     new MaterialApp(
@@ -12,24 +13,30 @@ void main() {
   );
 }
 
-// TODO: document
+/// Main class for the PermitLog app.
 class PermitLog extends StatefulWidget {
-  // Todo: docs
+  /// Creates the state for the app's main widget.
   @override
   State<StatefulWidget> createState() => new _PermitLogState();
 }
 
-// Todo: docs
+/// [State] for the [PermitLog] widget.
 class _PermitLogState extends State<PermitLog> {
+  /// Style for [Drawer] menu items.
   final TextStyle menuText = new TextStyle(color: Colors.white);
 
+  /// Content for the current state.
   var title = 'Home';
-  Widget content = new Center(child: new Text('changeme'),);
+  Widget content = new HomeView();
 
+  /// Sets the [AppBar]'s title and navigates to the view indicated.
   void navTo(String view) {
     setState(() {
       this.title = view;
       switch(view.toLowerCase()) {
+        case 'home':
+          this.content = new HomeView();
+          break;
         case 'about':
           this.content = new AboutView();
           break;
@@ -38,6 +45,7 @@ class _PermitLogState extends State<PermitLog> {
     Navigator.pop(context);
   }
 
+  /// Builds the current state.
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
