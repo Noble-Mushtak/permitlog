@@ -11,7 +11,7 @@ class AboutView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return new Container(
-      padding: const EdgeInsets.all(8.0),
+      padding: new EdgeInsets.all(8.0),
       child: new Markdown(
         data: _aboutText,
         onTapLink: (href) {
