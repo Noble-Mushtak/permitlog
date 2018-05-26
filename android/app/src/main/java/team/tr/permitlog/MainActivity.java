@@ -1,4 +1,4 @@
-package tr.team.permitlog;
+package team.tr.permitlog;
 
 import android.os.Bundle;
 
