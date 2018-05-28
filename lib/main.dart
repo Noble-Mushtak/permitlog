@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'views/about.dart';
+import 'views/goals.dart';
 import 'views/home.dart';
 import 'views/log.dart';
 import 'views/supervisors.dart';
@@ -48,6 +49,9 @@ class _PermitLogState extends State<PermitLog> {
         case 'about':
           this.content = new AboutView();
           break;
+        case 'goals':
+          this.content = new GoalsView();
+          break;
         default:
           break;
       }
@@ -83,6 +87,11 @@ class _PermitLogState extends State<PermitLog> {
                 leading: new Icon(Icons.supervisor_account, color: Colors.white,),
                 title: new Text("Supervisors", style: this.menuText,),
                 onTap: () => this._navTo("Supervisors"),
+              ),
+              new ListTile(
+                leading: new Icon(Icons.settings, color: Colors.white,),
+                title: new Text("Goals", style: this.menuText,),
+                onTap: () => this._navTo("Goals"),
               ),
               new ListTile(
                 leading: new Icon(Icons.alarm, color: Colors.white,),
