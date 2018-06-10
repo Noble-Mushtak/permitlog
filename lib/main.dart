@@ -34,6 +34,15 @@ class PermitLog extends StatefulWidget {
   State<StatefulWidget> createState() => new _PermitLogState();
 }
 
+/// Enum representing the different tabs in the drawer.
+enum _PermitLogTabs {
+  home,
+  log,
+  supervisors,
+  about,
+  goals
+}
+
 /// [State] for the [PermitLog] widget.
 class _PermitLogState extends State<PermitLog> {
   /// Firebase Auth API Interface
@@ -53,30 +62,36 @@ class _PermitLogState extends State<PermitLog> {
   Widget content = new HomeView();
 
   /// Sets the [AppBar]'s title and navigates to the view indicated.
-  void _navTo(String view) {
+  void _navTo(_PermitLogTabs tab, {bool fromDrawer = false}) {
     setState(() {
-      this.title = view;
-      switch(view.toLowerCase()) {
-        case 'home':
+      switch(tab) {
+        case _PermitLogTabs.home:
+          this.title = "Home";
           this.content = new HomeView();
           break;
-        case 'log':
+        case _PermitLogTabs.log:
+          this.title = "Log";
           this.content = new LogView();
           break;
-        case 'supervisors':
+        case _PermitLogTabs.supervisors:
+          this.title = "Supervisors";
           this.content = new SupervisorsView();
           break;
-        case 'about':
+        case _PermitLogTabs.about:
+          this.title = "About";
           this.content = new AboutView();
           break;
-        case 'goals':
+        case _PermitLogTabs.goals:
+          this.title = "Goals";
           this.content = new GoalsView();
           break;
         default:
           break;
       }
     });
-    Navigator.pop(context);
+    /// If this method was called because the user clicked one of the drawer tabs,
+    /// close the drawer.
+    if (fromDrawer) Navigator.pop(context);
   }
 
   /// Tells the user that authentication failed and they need to try again.
@@ -86,14 +101,18 @@ class _PermitLogState extends State<PermitLog> {
     ));
   }
 
+  /// Update _curUser and transition to HomeFragment
+  void _updateUser(FirebaseUser user) {
+    _curUser = user;
+    _navTo(_PermitLogTabs.home);
+  }
+
   /// Authenticates the user using Google sign-in.
-  Future<Null> _authenticateUserGoogle(BuildContext context) async {
+  Future<void> _authenticateUserGoogle(BuildContext context) async {
     /// This object represents the user in the Google API.
     GoogleSignInAccount googleUser = _googleSignIn.currentUser;
 
-    /// If the user is not signed in, try to re-authenticate the user:
-    if (googleUser == null) googleUser = await _googleSignIn.signInSilently();
-    /// If this fails, sign the user in using an interactive dialog:
+    /// If the user is not signed in, sign the user in using an interactive dialog:
     if (googleUser == null) {
       /// Keep trying to get the user's authentication until it works.
       while (googleUser == null) {
@@ -110,18 +129,19 @@ class _PermitLogState extends State<PermitLog> {
     /// Get the FirebaseUser from the googleAuth object.
     _auth.signInWithGoogle(
         idToken: googleAuth.idToken, accessToken: googleAuth.accessToken
-    ).then(
-      /// Set _curUser inside setState to update the widget:
-      (FirebaseUser user) =>
-      setState(() {
-        _curUser = user;
-        print("signed in " + _curUser?.uid.toString());
-      })
-    );
+    ).then(_updateUser);
+  }
+
+  Future<void> _authenticateUserEmail(BuildContext context) async {
+  /// Coming soon!
+  }
+
+  Future<void> _authenticateUserFacebook(BuildContext context) async {
+  /// Coming soon!
   }
 
   /// Authenticates the user using one of the sign-in options.
-  Future<Null> _authenticateUser(BuildContext context) async {
+  Future<void> _authenticateUser(BuildContext context) async {
     /// First, try to get the user from FirebaseAuth:
     FirebaseUser user = await _auth.currentUser();
     /// If user is non-null, update _curUser and return:
@@ -158,10 +178,10 @@ class _PermitLogState extends State<PermitLog> {
         _authenticateUserGoogle(context);
         break;
       case _SignInOptions.email:
-        /// Coming soon!
+        _authenticateUserEmail(context);
         break;
       case _SignInOptions.facebook:
-        /// Coming soon!
+        _authenticateUserFacebook(context);
         break;
     }
   }
@@ -192,27 +212,27 @@ class _PermitLogState extends State<PermitLog> {
               new ListTile(
                 leading: new Icon(Icons.home, color: Colors.white,),
                 title: new Text("Home", style: this.menuText,),
-                onTap: () => this._navTo("Home"),
+                onTap: () => this._navTo(_PermitLogTabs.home, fromDrawer: true),
               ),
               new ListTile(
                 leading: new Icon(Icons.assignment, color: Colors.white,),
                 title: new Text("Log", style: this.menuText,),
-                onTap: () => this._navTo("Log"),
+                onTap: () => this._navTo(_PermitLogTabs.log, fromDrawer: true),
               ),
               new ListTile(
                 leading: new Icon(Icons.supervisor_account, color: Colors.white,),
                 title: new Text("Supervisors", style: this.menuText,),
-                onTap: () => this._navTo("Supervisors"),
+                onTap: () => this._navTo(_PermitLogTabs.supervisors, fromDrawer: true),
               ),
               new ListTile(
                 leading: new Icon(Icons.settings, color: Colors.white,),
                 title: new Text("Goals", style: this.menuText,),
-                onTap: () => this._navTo("Goals"),
+                onTap: () => this._navTo(_PermitLogTabs.goals, fromDrawer: true),
               ),
               new ListTile(
                 leading: new Icon(Icons.alarm, color: Colors.white,),
                 title: new Text("About", style: this.menuText,),
-                onTap: () => this._navTo("About"),
+                onTap: () => this._navTo(_PermitLogTabs.about, fromDrawer: true),
               ),
               new ListTile(
                 leading: new Icon(Icons.exit_to_app, color: Colors.white,),
@@ -220,6 +240,7 @@ class _PermitLogState extends State<PermitLog> {
                 onTap: () {
                   /// Sign the user out, reset _curUser, and call setState:
                   _auth.signOut().then((e) => setState(() { _curUser = null; }));
+                  /// Close the drawer
                   Navigator.pop(context);
                 },
               ),

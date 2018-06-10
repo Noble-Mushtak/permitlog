@@ -9,7 +9,8 @@ dependencies:
   url_launcher: ^3.0.1
   google_sign_in: ^3.0.4
   firebase_auth: ^0.5.11
-  firebase_database: ^0.0.12
+  firebase_database: ^1.0.1
+  intl: ^0.15.6
 
 dev_dependencies:
   flutter_test:
