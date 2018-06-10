@@ -7,8 +7,8 @@ dependencies:
   cupertino_icons: ^0.1.0
   flutter_markdown: ^0.1.5
   url_launcher: ^3.0.1
-  google_sign_in: ^0.3.1
-  firebase_auth: ^0.2.0
+  google_sign_in: ^3.0.4
+  firebase_auth: ^0.5.11
   firebase_database: ^0.0.12
 
 dev_dependencies:
