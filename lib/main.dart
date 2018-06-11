@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'views/about.dart';
+import 'views/emailform.dart';
 import 'views/goals.dart';
 import 'views/home.dart';
 import 'views/log.dart';
@@ -95,9 +97,10 @@ class _PermitLogState extends State<PermitLog> {
   }
 
   /// Tells the user that authentication failed and they need to try again.
-  void _tryAuthenticationAgain(BuildContext context) {
+  void _tryAuthenticationAgain(BuildContext context, [String message]) {
+    Scaffold.of(context).removeCurrentSnackBar();
     Scaffold.of(context).showSnackBar(new SnackBar(
-        content: new Text("Authentication failed. Please try again")
+        content: new Text(message ?? "Authentication failed. Please try again")
     ));
   }
 
@@ -105,6 +108,12 @@ class _PermitLogState extends State<PermitLog> {
   void _updateUser(FirebaseUser user) {
     _curUser = user;
     _navTo(_PermitLogTabs.home);
+  }
+
+  /// Call _updateUser and then exit dialog
+  void _updateUserAndExit(FirebaseUser user) {
+    _updateUser(user);
+    Navigator.pop(context);
   }
 
   /// Authenticates the user using Google sign-in.
@@ -127,17 +136,84 @@ class _PermitLogState extends State<PermitLog> {
     /// Get the object with the user's data.
     GoogleSignInAuthentication googleAuth = await googleUser.authentication;
     /// Get the FirebaseUser from the googleAuth object.
-    _auth.signInWithGoogle(
+    await _auth.signInWithGoogle(
         idToken: googleAuth.idToken, accessToken: googleAuth.accessToken
-    ).then(_updateUser);
+    ).then(_updateUser)
+    /// If there is an error, retry authentication.
+    .catchError((Object error) => _tryAuthenticationAgain(context));
   }
 
-  Future<void> _authenticateUserEmail(BuildContext context) async {
-  /// Coming soon!
+  Future<void> _authenticateUserEmail(BuildContext outerContext) async {
+    /// Create the key and controllers necessary for an e-mail form.
+    GlobalKey<FormState> formKey = new GlobalKey<FormState>();
+    TextEditingController emailController = new TextEditingController();
+    TextEditingController passwordController = new TextEditingController();
+    /// Ask the user to enter the e-mail and password.
+    await showDialog<void>(
+      context: outerContext,
+      barrierDismissible: false,
+      builder: (BuildContext context) => new AlertDialog(
+        content: new EmailForm(
+          key: formKey,
+          emailController: emailController,
+          passwordController: passwordController
+        ),
+        actions: <Widget>[
+          new FlatButton(
+            child: new Text("Sign In"),
+            onPressed: () async {
+              /// Validate the form.
+              if (formKey.currentState.validate()) {
+                /// Finally, try to sign the user in with the e-mail and password
+                String email = emailController.text, password = passwordController.text;
+                _auth.signInWithEmailAndPassword(email: email, password: password)
+                  .then(_updateUserAndExit, onError: (Object error) async {
+                    /// If this is a PlatformException:
+                    if (error is PlatformException) {
+                      /// If this is because the user does not exist,
+                      /// then try creating the user.
+                      if (error.message.contains("There is no user record corresponding to this identifier. The user may have been deleted.")) {
+                        await _auth.createUserWithEmailAndPassword(email: email, password: password)
+                          .then(_updateUserAndExit);
+                        return;
+                      }
+                    }
+                    /// If the error has not been dealt with, rethrow it.
+                    throw error;
+                  })
+                  .catchError((Object error) { /// If there is another error...
+                    /// Create an error message to show the user.
+                    String message;
+                    /// If this is a PlatformException, print message for debugging.
+                    if (error is PlatformException) {
+                      print(error.message);
+                      /// Invalid e-mail message:
+                      if (error.message.contains("The email address is badly formatted.")) {
+                        message = "Please enter a valid e-mail.";
+                      }
+                      /// Invalid password message:
+                      if (error.message.contains("The password is invalid or the user does not have a password.")) {
+                        message = "Invalid password.";
+                      }
+                    }
+                    /// Try authentication again.
+                    _tryAuthenticationAgain(outerContext, message);
+                  });
+              }
+            }
+          )
+        ],
+      )
+    );
   }
 
   Future<void> _authenticateUserFacebook(BuildContext context) async {
-  /// Coming soon!
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext context) => new AlertDialog(
+        content: new Text("Coming soon!")
+      )
+    );
   }
 
   /// Authenticates the user using one of the sign-in options.
@@ -172,17 +248,20 @@ class _PermitLogState extends State<PermitLog> {
         ]
       )
     );
-    /// Call different authentication methods depending on what is chosen:
-    switch (option) {
+    /// Keep trying to authenticate the user until it works:
+    while (await _auth.currentUser() == null) {
+      /// Call different authentication methods depending on what is chosen:
+      switch (option) {
       case _SignInOptions.google:
-        _authenticateUserGoogle(context);
+        await _authenticateUserGoogle(context);
         break;
       case _SignInOptions.email:
-        _authenticateUserEmail(context);
+        await _authenticateUserEmail(context);
         break;
       case _SignInOptions.facebook:
-        _authenticateUserFacebook(context);
+        await _authenticateUserFacebook(context);
         break;
+      }
     }
   }
 
