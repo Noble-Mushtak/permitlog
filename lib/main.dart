@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter_facebook_login/flutter_facebook_login.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -55,6 +56,8 @@ class _PermitLogState extends State<PermitLog> {
   final GoogleSignIn _googleSignIn = new GoogleSignIn(
     scopes: ['openid', 'email']
   );
+  /// Facebook Login API Interface
+  final FacebookLogin _facebookLogin = new FacebookLogin();
 
   /// Style for [Drawer] menu items.
   final TextStyle menuText = new TextStyle(color: Colors.white);
@@ -118,24 +121,17 @@ class _PermitLogState extends State<PermitLog> {
 
   /// Authenticates the user using Google sign-in.
   Future<void> _authenticateUserGoogle(BuildContext context) async {
-    /// This object represents the user in the Google API.
-    GoogleSignInAccount googleUser = _googleSignIn.currentUser;
-
-    /// If the user is not signed in, sign the user in using an interactive dialog:
+    /// Try to sign the user into Google.
+    GoogleSignInAccount googleUser = await _googleSignIn.signIn();
+    /// If authentication failed, tell the user to try again and do not go on.
     if (googleUser == null) {
-      /// Keep trying to get the user's authentication until it works.
-      while (googleUser == null) {
-        /// Start the interactive sign-in process.
-        googleUser = await _googleSignIn.signIn();
-
-        /// If authentication failed, tell the user to try again.
-        if (googleUser == null) _tryAuthenticationAgain(context);
-      }
+      _tryAuthenticationAgain(context);
+      return;
     }
 
     /// Get the object with the user's data.
     GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-    /// Get the FirebaseUser from the googleAuth object.
+    /// Update _curUser by signing in with the Google token.
     await _auth.signInWithGoogle(
         idToken: googleAuth.idToken, accessToken: googleAuth.accessToken
     ).then(_updateUser)
@@ -143,6 +139,7 @@ class _PermitLogState extends State<PermitLog> {
     .catchError((Object error) => _tryAuthenticationAgain(context));
   }
 
+  /// Authenticates user using e-mail and password dialog.
   Future<void> _authenticateUserEmail(BuildContext outerContext) async {
     /// Create the key and controllers necessary for an e-mail form.
     GlobalKey<FormState> formKey = new GlobalKey<FormState>();
@@ -151,7 +148,6 @@ class _PermitLogState extends State<PermitLog> {
     /// Ask the user to enter the e-mail and password.
     await showDialog<void>(
       context: outerContext,
-      barrierDismissible: false,
       builder: (BuildContext context) => new AlertDialog(
         content: new EmailForm(
           key: formKey,
@@ -205,15 +201,25 @@ class _PermitLogState extends State<PermitLog> {
         ],
       )
     );
+    /// If authentication failed, tell the user to try again.
+    if (await _auth.currentUser() == null) {
+      _tryAuthenticationAgain(outerContext);
+    }
   }
 
+  /// Authenticates user using Facebook login.
   Future<void> _authenticateUserFacebook(BuildContext context) async {
-    await showDialog<void>(
-      context: context,
-      builder: (BuildContext context) => new AlertDialog(
-        content: new Text("Coming soon!")
-      )
-    );
+    /// Try to log the user into Facebook.
+    FacebookLoginResult result = await _facebookLogin.logInWithReadPermissions(["email"]);
+    /// If authentication failed, tell the user to try again and do not go on.
+    if (result.status != FacebookLoginStatus.loggedIn) {
+      _tryAuthenticationAgain(context);
+      return;
+    }
+    /// Update _curUser by signing in with the Facebook token.
+    await _auth.signInWithFacebook(accessToken: result.accessToken.token).then(_updateUser)
+    /// If there is an error, tell user authentication failed.
+    .catchError((Object error) => _tryAuthenticationAgain(context));
   }
 
   /// Authenticates the user using one of the sign-in options.
@@ -227,42 +233,47 @@ class _PermitLogState extends State<PermitLog> {
     }
     /// Otherwise, we need to sign the user in.
 
-    /// Ask the user to select a sign-in option.
-    _SignInOptions option = await showDialog<_SignInOptions>(
-      context: context,
-      builder: (BuildContext context) => new AlertDialog(
-        content: new Text("Select a sign-in option."),
-        actions: <Widget>[
-          new FlatButton(
-              child: new Text("Google"),
-              onPressed: () => Navigator.pop(context, _SignInOptions.google)
-          ),
-          new FlatButton(
-              child: new Text("E-mail"),
-              onPressed: () => Navigator.pop(context, _SignInOptions.email)
-          ),
-          new FlatButton(
-              child: new Text("Facebook"),
-              onPressed: () => Navigator.pop(context, _SignInOptions.facebook)
-          ),
-        ]
-      )
-    );
     /// Keep trying to authenticate the user until it works:
     while (await _auth.currentUser() == null) {
+      /// Ask the user to select a sign-in option.
+      _SignInOptions option = await showDialog<_SignInOptions>(
+        context: context,
+        builder: (BuildContext context) => new AlertDialog(
+          content: new Text("Select a sign-in option."),
+          actions: <Widget>[
+            new FlatButton(
+                child: new Text("Google"),
+                onPressed: () => Navigator.pop(context, _SignInOptions.google)
+            ),
+            new FlatButton(
+                child: new Text("E-mail"),
+                onPressed: () => Navigator.pop(context, _SignInOptions.email)
+            ),
+            new FlatButton(
+                child: new Text("Facebook"),
+                onPressed: () => Navigator.pop(context, _SignInOptions.facebook)
+            ),
+          ]
+        )
+      );
       /// Call different authentication methods depending on what is chosen:
       switch (option) {
-      case _SignInOptions.google:
-        await _authenticateUserGoogle(context);
-        break;
-      case _SignInOptions.email:
-        await _authenticateUserEmail(context);
-        break;
-      case _SignInOptions.facebook:
-        await _authenticateUserFacebook(context);
-        break;
+        case _SignInOptions.google:
+          await _authenticateUserGoogle(context);
+          break;
+        case _SignInOptions.email:
+          await _authenticateUserEmail(context);
+          break;
+        case _SignInOptions.facebook:
+          await _authenticateUserFacebook(context);
+          break;
       }
     }
+    /// Once authentication succeeds, tell the user.
+    Scaffold.of(context).removeCurrentSnackBar();
+    Scaffold.of(context).showSnackBar(new SnackBar(
+      content: new Text("Authentication succeeded.")
+    ));
   }
 
   /// Builds the current state.
@@ -317,9 +328,11 @@ class _PermitLogState extends State<PermitLog> {
                 leading: new Icon(Icons.exit_to_app, color: Colors.white,),
                 title: new Text("Sign Out", style: this.menuText,),
                 onTap: () {
-                  /// Sign the user out, reset _curUser, and call setState:
+                  /// Sign the user out, reset _curUser, and call setState.
+                  _googleSignIn.signOut();
+                  _facebookLogin.logOut();
                   _auth.signOut().then((e) => setState(() { _curUser = null; }));
-                  /// Close the drawer
+                  /// Close the drawer.
                   Navigator.pop(context);
                 },
               ),
