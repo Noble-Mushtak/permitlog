@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'views/about.dart';
-import 'views/emailform.dart';
+import 'views/email_form.dart';
 import 'views/goals.dart';
 import 'views/home.dart';
 import 'views/log.dart';

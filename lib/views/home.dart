@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:permitlog/drivingtimes.dart';
+import 'package:permitlog/driving_times.dart';
+import 'package:permitlog/supervisor_manager.dart';
 
 /// View that serves as the home screen for the PermitLog app. Displays
 /// the current drive timer and totals for the user's goals.
@@ -18,18 +20,45 @@ class _HomeViewState extends State<HomeView> {
   /// Firebase API Interfaces
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseDatabase _data = FirebaseDatabase.instance;
-  /// Subscription that listens for changes to authentication:
+  /// Subscription that listens for changes to authentication.
   StreamSubscription<FirebaseUser> _authSubscription;
   /// Firebase User Object
   FirebaseUser _curUser;
-  /// Reference to all of the user's data:
+  /// Reference to all of the user's data.
   DatabaseReference _userRef;
-  /// Object that holds all of the user's goals:
+  /// Object that holds all of the user's goals.
   DrivingTimes _userGoals = new DrivingTimes();
-  /// Subscription that listens for changes to user's goal data:
+  /// Subscription that listens for changes to user's goal data.
   StreamSubscription<Event> _goalSubscription;
+  /// Object that manages all of the supervisor data.
+  SupervisorManager _supervisorManager;
+  /// Index of selected supervisor.
+  int _supervisorIndex = 0;
 
-  /// This method is called whenever new data about the goals come in.
+  /// Callback for when user is updated.
+  Future<void> _updateUser(FirebaseUser user) async {
+    /// When the user changes, stop all subscriptions:
+    await _goalSubscription?.cancel();
+    await _supervisorManager?.cancelSubscriptions();
+    setState(() {
+      /// Update _curUser.
+      _curUser = user;
+      /// If _curUser is null, then _userRef is null.
+      if (_curUser == null) _userRef = null;
+      /// Otherwise, if we know who the user is, update _userRef:
+      else {
+        _userRef = _data.reference().child(_curUser.uid);
+        /// Also, start the subscriptions.
+        _goalSubscription = _userRef?.child("goals")?.onValue?.listen(_goalsListener);
+        _supervisorManager = new SupervisorManager(userRef: _userRef, callback: () {
+          /// Invoke setState since _supervisorManager has changed.
+          setState(() {});
+        });
+        _supervisorManager.startSubscriptions();
+      }
+    });
+  }
+  /// Callback for when new data about the goals come in.
   void _goalsListener(Event event) {
     /// Encapsulate this in setState because it updates _userGoals.
     setState(() {
@@ -49,15 +78,7 @@ class _HomeViewState extends State<HomeView> {
   Widget build(BuildContext context) {
     /// Subscribe to changes to authentication if we haven't already:
     if (_authSubscription == null) {
-      _authSubscription = _auth.onAuthStateChanged.listen(
-        /// Update _curUser according to the subscription:
-        (FirebaseUser user) => setState(() {
-          _curUser = user;
-          /// When the user changes, reset all listeners:
-          _goalSubscription?.cancel();
-          _goalSubscription = null;
-        })
-      );
+      _authSubscription = _auth.onAuthStateChanged.listen(_updateUser);
     }
 
     /// Get the TextTheme so we can style the texts:
@@ -66,12 +87,6 @@ class _HomeViewState extends State<HomeView> {
     VoidCallback startCallback;
     if (_curUser != null) {
       startCallback = () {};
-      /// Also, if we know who the user is, update _userRef:
-      _userRef = _data.reference().child(_curUser.uid);
-    }
-    /// Otherwise, if we don't know who the user is, reset _userRef;
-    else {
-      _userRef = null;
     }
 
     /// Array holding all Text objects for the different goals the user has.
@@ -90,9 +105,26 @@ class _HomeViewState extends State<HomeView> {
         goalTextObjs.add(new Text(typeCapitalized+": 00:00/"+goalFormat.format(_userGoals.getTime(type))+":00", style: textTheme.headline));
       }
     }
-    /// Listen to changes in the user's goal data if there is no subscription yet:
-    if (_goalSubscription == null) {
-      _goalSubscription = _userRef?.child("goals")?.onValue?.listen(_goalsListener);
+
+    /// List of items for each supervisor.
+    List<DropdownMenuItem<num>> supervisorItems = <DropdownMenuItem<num>>[];
+    /// If the supervisor manager has not started yet, just state "No supervisors".
+    if (_supervisorManager == null) supervisorItems = <DropdownMenuItem<num>>[
+      new DropdownMenuItem<num>(value: 0, child: new Text("No supervisors"))
+    ];
+    /// Otherwise, make an item for each supervisor.
+    else {
+      for (int i = 0; i < _supervisorManager.supervisorNames.length; i++) {
+        String supervisorName = _supervisorManager.supervisorNames[i];
+        supervisorItems.add(
+          new DropdownMenuItem<num>(value: i, child: new Text(supervisorName))
+        );
+      }
+      /// Also, make sure _supervisorIndex is a valid index.
+      _supervisorIndex = min(
+          _supervisorIndex,
+          _supervisorManager.supervisorNames.length-1
+      );
     }
 
     return new SingleChildScrollView(
@@ -119,9 +151,13 @@ class _HomeViewState extends State<HomeView> {
                             ]
                         ),
                         new DropdownButton<num>(
-                            value: -1,
-                            items: [new DropdownMenuItem<num>(value: -1, child: new Text("Select a Driver"))],
-                            onChanged: (num index) {}
+                            value: _supervisorIndex,
+                            items: supervisorItems,
+                            /// When user selects supervisor,
+                            /// update _supervisorIndex.
+                            onChanged: (num index) {
+                              setState(() { _supervisorIndex = index; });
+                            }
                         )
                       ]
                   )
@@ -141,6 +177,7 @@ class _HomeViewState extends State<HomeView> {
   void dispose() {
     _authSubscription.cancel();
     _goalSubscription?.cancel();
+    _supervisorManager?.cancelSubscriptions();
     super.dispose();
   }
 }

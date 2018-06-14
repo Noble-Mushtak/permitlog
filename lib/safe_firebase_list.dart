@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
 
@@ -5,7 +7,7 @@ import 'package:firebase_database/firebase_database.dart';
 /// that all link to complete data sets.
 class SafeFirebaseList {
   /// List of Firebase keys
-  List<String> keys;
+  List<String> keys = <String>[];
   /// Callback which checks if data is complete
   bool Function(dynamic) _isDataComplete;
   /// Original callbacks for onChildAdded, onChildChanged, onChildRemoved
@@ -22,7 +24,7 @@ class SafeFirebaseList {
     /// If there is complete data, update keys and invoke _addedCallback.
     if (_isDataComplete(event.snapshot.value)) {
       keys.add(event.snapshot.key);
-      _addedCallback(event.snapshot.value);
+      _addedCallback(event);
     }
   }
   /// This callback invokes safeAddedCallback if event is not in keys
@@ -39,6 +41,39 @@ class SafeFirebaseList {
     if (keys.contains(event.snapshot.key)) {
       _removedCallback(event);
       keys.remove(event.snapshot.key);
+    }
+  }
+
+  /// Stores subscriptions to onChildAdded, onChildChanged, onChildRemoved events.
+  StreamSubscription<Event> _addedSubscription;
+  StreamSubscription<Event> _changedSubscription;
+  StreamSubscription<Event> _removedSubscription;
+  /// Boolean that keeps track of if subscriptions are listening.
+  bool isListening = false;
+  /// Starts subscriptions to some Firebase reference (which may be null).
+  void startSubscriptions(DatabaseReference dataRef) {
+    /// Only make changes if subscriptions are not yet listening.
+    if (!isListening) {
+      /// Start the subscriptions using the safe callbacks.
+      _addedSubscription = dataRef?.onChildAdded?.listen(safeAddedCallback);
+      _changedSubscription = dataRef?.onChildChanged?.listen(safeChangedCallback);
+      _removedSubscription = dataRef?.onChildRemoved?.listen(safeRemovedCallback);
+      /// Update isListening.
+      isListening = true;
+    }
+  }
+  /// Cancels subscriptions.
+  Future<void> cancelSubscriptions() async {
+    /// Only make changes if subscriptions are already listening.
+    if (isListening) {
+      /// Cancel all subscriptions.
+      await _addedSubscription?.cancel();
+      await _changedSubscription?.cancel();
+      await _removedSubscription?.cancel();
+      /// Clear the data.
+      keys.clear();
+      /// Update isListening.
+      isListening = false;
     }
   }
 }
