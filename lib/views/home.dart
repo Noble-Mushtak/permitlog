@@ -7,7 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:permitlog/driving_times.dart';
 import 'package:permitlog/views/stateful_checkbox.dart';
-import 'package:permitlog/supervisor_manager.dart';
+import 'package:permitlog/supervisor_model.dart';
 
 /// View that serves as the home screen for the PermitLog app. Displays
 /// the current drive timer and totals for the user's goals.
@@ -32,7 +32,9 @@ class _HomeViewState extends State<HomeView> {
   /// Subscription that listens for changes to user's goal data.
   StreamSubscription<Event> _goalSubscription;
   /// Object that manages all of the supervisor data.
-  SupervisorManager _supervisorManager;
+  SupervisorModel _supervisorModel;
+  /// List of all the supervisor names.
+  List<String> _supervisorNames;
 
   /// Index of selected supervisor.
   int _supervisorIndex = 0;
@@ -50,14 +52,15 @@ class _HomeViewState extends State<HomeView> {
   /// Tells user to add supervisor.
   void _supervisorWarning() {
     Scaffold.of(context).showSnackBar(new SnackBar(
-        content: new Text("Please add the supervisor that accompanied you by tapping the plus sign in the bottom right, and tapping \"Add Supervisor\"")
+        content: new Text("Please add the supervisor accompanying you by tapping the plus sign in the bottom right, and tapping \"Add Supervisor\""),
+        duration: new Duration(seconds: 5),
     ));
   }
   /// Callback for when user is updated.
   Future<void> _updateUser(FirebaseUser user) async {
     /// When the user changes, stop all subscriptions:
     await _goalSubscription?.cancel();
-    await _supervisorManager?.cancelSubscriptions();
+    await _supervisorModel.cancelSubscriptions();
     /// Reset any variables related to Firebase data.
     _ongoingDrive = false;
     setState(() {
@@ -71,12 +74,15 @@ class _HomeViewState extends State<HomeView> {
         /// Update any other DatabaseReferences.
         _ongoingRef = _userRef.child("ongoing");
         /// Also, start the subscriptions.
-        _goalSubscription = _userRef?.child("goals")?.onValue?.listen(_goalsListener);
-        _supervisorManager = new SupervisorManager(userRef: _userRef, callback: () {
-          /// Invoke setState since _supervisorManager has changed.
-          setState(() {});
-        });
-        _supervisorManager.startSubscriptions();
+        _goalSubscription = _userRef.child("goals").onValue.listen(_goalsListener);
+        _supervisorModel = new SupervisorModel(
+          userRef: _userRef,
+          callback: (List<String> ids, List<String> names, List<Map> data) {
+            /// Invoke setState since _supervisorNames has changed.
+            setState(() { _supervisorNames = names; });
+          }
+        );
+        _supervisorModel.startSubscriptions();
       }
     });
   }
@@ -98,7 +104,7 @@ class _HomeViewState extends State<HomeView> {
   /// Callback for when user clicks "Start Drive".
   void _startDrive() {
     /// If there are no supervisors, tell the user to add a supervisor.
-    if (_supervisorManager.supervisorData.isEmpty) {
+    if (_supervisorModel.supervisorData.isEmpty) {
       _supervisorWarning();
       return;
     }
@@ -131,12 +137,12 @@ class _HomeViewState extends State<HomeView> {
       _ongoingDrive = false;
     });
     /// If there are no supervisors, tell the user to add a supervisor.
-    if (_supervisorManager.supervisorData.isEmpty) {
+    if (_supervisorModel.supervisorData.isEmpty) {
       _supervisorWarning();
       return;
     }
     /// Save the supervisor ID in Firebase.
-    String supervisorId = _supervisorManager.supervisorIds[_supervisorIndex];
+    String supervisorId = _supervisorModel.supervisorIds[_supervisorIndex];
     _ongoingRef.child("driver_id").set(supervisorId);
     /// Save the stop time in Firebase.
     _endingTime = new DateTime.now();
@@ -240,8 +246,9 @@ class _HomeViewState extends State<HomeView> {
     super.initState();
     /// Subscribe to changes to authentication:
     _authSubscription = _auth.onAuthStateChanged.listen(_updateUser);
-    /// As a placeholder, initialize _supervisorManager:
-    _supervisorManager = new SupervisorManager(userRef: null, callback: null);
+    /// As a placeholder, initialize _supervisorModel and _supervisorNames.
+    _supervisorModel = new SupervisorModel(userRef: null, callback: null);
+    _supervisorNames = _supervisorModel.supervisorNames;
   }
 
   @override
@@ -286,17 +293,13 @@ class _HomeViewState extends State<HomeView> {
     /// List of items for each supervisor.
     List<DropdownMenuItem<num>> supervisorItems = <DropdownMenuItem<num>>[];
     /// Make an item for each supervisor.
-    for (int i = 0; i < _supervisorManager.supervisorNames.length; i++) {
-      String supervisorName = _supervisorManager.supervisorNames[i];
+    for (int i = 0; i < _supervisorNames.length; i++) {
       supervisorItems.add(
-        new DropdownMenuItem<num>(value: i, child: new Text(supervisorName))
+        new DropdownMenuItem<num>(value: i, child: new Text(_supervisorNames[i]))
       );
     }
-    /// Also, make sure _supervisorIndex is a valid index.
-    _supervisorIndex = min(
-        _supervisorIndex,
-        _supervisorManager.supervisorNames.length-1
-    );
+    /// Also, make sure _supervisorIndex is a valid index of _supervisorNames.
+    _supervisorIndex = min(_supervisorIndex, _supervisorNames.length-1);
 
     return new SingleChildScrollView(
         child: new Column(
@@ -348,7 +351,7 @@ class _HomeViewState extends State<HomeView> {
   void dispose() {
     _authSubscription.cancel();
     _goalSubscription?.cancel();
-    _supervisorManager?.cancelSubscriptions();
+    _supervisorModel.cancelSubscriptions();
     super.dispose();
   }
 }

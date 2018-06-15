@@ -136,7 +136,7 @@ class _PermitLogState extends State<PermitLog> {
         idToken: googleAuth.idToken, accessToken: googleAuth.accessToken
     ).then(_updateUser)
     /// If there is an error, retry authentication.
-    .catchError((Object error) => _tryAuthenticationAgain(context));
+    .catchError((dynamic error) => _tryAuthenticationAgain(context));
   }
 
   /// Authenticates user using e-mail and password dialog.
@@ -163,7 +163,7 @@ class _PermitLogState extends State<PermitLog> {
                 /// Finally, try to sign the user in with the e-mail and password
                 String email = emailController.text, password = passwordController.text;
                 _auth.signInWithEmailAndPassword(email: email, password: password)
-                  .then(_updateUserAndExit, onError: (Object error) async {
+                  .then(_updateUserAndExit, onError: (dynamic error) async {
                     /// If this is a PlatformException:
                     if (error is PlatformException) {
                       /// If this is because the user does not exist,
@@ -177,7 +177,7 @@ class _PermitLogState extends State<PermitLog> {
                     /// If the error has not been dealt with, rethrow it.
                     throw error;
                   })
-                  .catchError((Object error) { /// If there is another error...
+                  .catchError((dynamic error) { /// If there is another error...
                     /// Create an error message to show the user.
                     String message;
                     /// If this is a PlatformException, print message for debugging.
@@ -219,7 +219,7 @@ class _PermitLogState extends State<PermitLog> {
     /// Update _curUser by signing in with the Facebook token.
     await _auth.signInWithFacebook(accessToken: result.accessToken.token).then(_updateUser)
     /// If there is an error, tell user authentication failed.
-    .catchError((Object error) => _tryAuthenticationAgain(context));
+    .catchError((dynamic error) => _tryAuthenticationAgain(context));
   }
 
   /// Authenticates the user using one of the sign-in options.
@@ -331,7 +331,7 @@ class _PermitLogState extends State<PermitLog> {
                   /// Sign the user out, reset _curUser, and call setState.
                   _googleSignIn.signOut();
                   _facebookLogin.logOut();
-                  _auth.signOut().then((e) => setState(() { _curUser = null; }));
+                  _auth.signOut().then((void _) => setState(() { _curUser = null; }));
                   /// Close the drawer.
                   Navigator.pop(context);
                 },

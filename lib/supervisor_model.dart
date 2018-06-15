@@ -5,7 +5,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:permitlog/safe_firebase_list.dart';
 
 /// Class that manages subscriptions and data related to supervisors.
-class SupervisorManager {
+class SupervisorModel {
   /// Object that holds list of keys to supervisor data
   /// and safe listeners for managing the supervisor data.
   SafeFirebaseList _supervisorList;
@@ -15,8 +15,8 @@ class SupervisorManager {
   List<String> supervisorNames = <String>["No supervisors"];
   /// List of supervisor data.
   List<Map> supervisorData = <Map>[];
-  /// Callback provided by constructor in order to notify widget of data changes
-  void Function() _notifyDataChanged;
+  /// Callback provided by constructor in order to notify widget of data changes.
+  void Function(List<String>, List<String>, List<Map>) _notifyDataChanged;
 
   /// Checks if supervisor data has a complete name.
   bool hasCompleteName(dynamic supervisorData) {
@@ -45,7 +45,7 @@ class SupervisorManager {
     supervisorNames.add(createSupervisorName(event.snapshot.value));
     supervisorData.add(event.snapshot.value);
     /// Notify the widget.
-    _notifyDataChanged();
+    _notifyDataChanged(supervisorIds, supervisorNames, supervisorData);
   }
   /// onChildChanged callback.
   void _supervisorChanged(Event event) {
@@ -55,7 +55,7 @@ class SupervisorManager {
     supervisorNames[supervisorIndex] = createSupervisorName(event.snapshot.value);
     supervisorData[supervisorIndex] = event.snapshot.value;
     /// Notify the widget.
-    _notifyDataChanged();
+    _notifyDataChanged(supervisorIds, supervisorNames, supervisorData);
   }
   /// onChildRemoved callback.
   void _supervisorRemoved(Event event) {
@@ -67,11 +67,11 @@ class SupervisorManager {
     /// Add "No supervisors" if supervisorNames is empty.
     if (supervisorNames.isEmpty) supervisorNames.add("No supervisors");
     /// Notify the widget.
-    _notifyDataChanged();
+    _notifyDataChanged(supervisorIds, supervisorNames, supervisorData);
   }
 
   /// Constructor which initializes instance variables
-  SupervisorManager({@required DatabaseReference userRef, @required void Function() callback})
+  SupervisorModel({@required DatabaseReference userRef, @required void Function(List<String>, List<String>, List<Map>) callback})
     : _supervisorRef = userRef?.child("drivers"),
       _notifyDataChanged = callback {
     /// Instantiate the safe Firebase list.
