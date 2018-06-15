@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:permitlog/driving_times.dart';
-import 'package:permitlog/elapsed_time_model.dart';
+import 'package:permitlog/log_model.dart';
 import 'package:permitlog/views/stateful_checkbox.dart';
 import 'package:permitlog/supervisor_model.dart';
 import 'package:permitlog/utilities.dart';
@@ -30,15 +30,17 @@ class _HomeViewState extends State<HomeView> {
   /// Reference to all of the user's data.
   DatabaseReference _userRef;
   /// Object that holds time the user has completed in each category.
+  /// These times are stored in milliseconds.
   DrivingTimes _userTimes = new DrivingTimes();
   /// Object that holds all of the user's goals.
+  /// These times are stored in hours.
   DrivingTimes _userGoals = new DrivingTimes();
   /// Subscription that listens for changes to user's goal data.
   StreamSubscription<Event> _goalSubscription;
   /// Model that manages all of the supervisor data.
   SupervisorModel _supervisorModel;
-  /// Model that calculates the time the user has completed in each category.
-  ElapsedTimeModel _elapsedModel;
+  /// Model that calculates the time the user has driven in each category.
+  LogModel _logModel;
   /// List of all the supervisor names.
   List<String> _supervisorNames;
 
@@ -67,7 +69,7 @@ class _HomeViewState extends State<HomeView> {
     /// When the user changes, stop all subscriptions:
     await _goalSubscription?.cancel();
     await _supervisorModel.cancelSubscriptions();
-    await _elapsedModel.cancelSubscriptions();
+    await _logModel.cancelSubscriptions();
     /// Reset any variables related to Firebase data.
     _ongoingDrive = false;
     setState(() {
@@ -90,14 +92,14 @@ class _HomeViewState extends State<HomeView> {
           }
         );
         _supervisorModel.startSubscriptions();
-        _elapsedModel = new ElapsedTimeModel(
+        _logModel = new LogModel(
           userRef: _userRef,
-          callback: (DrivingTimes timesData) {
+          callback: (List<String> logIds, List<String> logSummaries, DrivingTimes timesData, Map<String, Map> logData) {
             /// Invoke setState since _userTimes has changed.
             setState(() { _userTimes = timesData; });
           }
         );
-        _elapsedModel.startSubscriptions();
+        _logModel.startSubscriptions();
       }
     });
   }
@@ -264,8 +266,8 @@ class _HomeViewState extends State<HomeView> {
     /// As a placeholder, initialize _supervisorModel and _supervisorNames.
     _supervisorModel = new SupervisorModel(userRef: null, callback: null);
     _supervisorNames = _supervisorModel.supervisorNames;
-    /// Also, initialize _elapsedModel.
-    _elapsedModel = new ElapsedTimeModel(userRef: null, callback: null);
+    /// Also, initialize _logModel.
+    _logModel = new LogModel(userRef: null, callback: null);
   }
 
   @override
@@ -371,7 +373,7 @@ class _HomeViewState extends State<HomeView> {
     _authSubscription.cancel();
     _goalSubscription?.cancel();
     _supervisorModel.cancelSubscriptions();
-    _elapsedModel.cancelSubscriptions();
+    _logModel.cancelSubscriptions();
     super.dispose();
   }
 }
