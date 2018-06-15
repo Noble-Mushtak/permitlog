@@ -9,6 +9,8 @@ class SupervisorManager {
   /// Object that holds list of keys to supervisor data
   /// and safe listeners for managing the supervisor data.
   SafeFirebaseList _supervisorList;
+  /// List of supervisor keys.
+  List<String> get supervisorIds => _supervisorList.keys;
   /// List of supervisor names.
   List<String> supervisorNames = <String>["No supervisors"];
   /// List of supervisor data.
