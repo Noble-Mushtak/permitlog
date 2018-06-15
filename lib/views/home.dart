@@ -6,8 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:permitlog/driving_times.dart';
+import 'package:permitlog/elapsed_time_model.dart';
 import 'package:permitlog/views/stateful_checkbox.dart';
 import 'package:permitlog/supervisor_model.dart';
+import 'package:permitlog/utilities.dart';
 
 /// View that serves as the home screen for the PermitLog app. Displays
 /// the current drive timer and totals for the user's goals.
@@ -27,12 +29,16 @@ class _HomeViewState extends State<HomeView> {
   FirebaseUser _curUser;
   /// Reference to all of the user's data.
   DatabaseReference _userRef;
+  /// Object that holds time the user has completed in each category.
+  DrivingTimes _userTimes = new DrivingTimes();
   /// Object that holds all of the user's goals.
   DrivingTimes _userGoals = new DrivingTimes();
   /// Subscription that listens for changes to user's goal data.
   StreamSubscription<Event> _goalSubscription;
-  /// Object that manages all of the supervisor data.
+  /// Model that manages all of the supervisor data.
   SupervisorModel _supervisorModel;
+  /// Model that calculates the time the user has completed in each category.
+  ElapsedTimeModel _elapsedModel;
   /// List of all the supervisor names.
   List<String> _supervisorNames;
 
@@ -61,6 +67,7 @@ class _HomeViewState extends State<HomeView> {
     /// When the user changes, stop all subscriptions:
     await _goalSubscription?.cancel();
     await _supervisorModel.cancelSubscriptions();
+    await _elapsedModel.cancelSubscriptions();
     /// Reset any variables related to Firebase data.
     _ongoingDrive = false;
     setState(() {
@@ -77,12 +84,20 @@ class _HomeViewState extends State<HomeView> {
         _goalSubscription = _userRef.child("goals").onValue.listen(_goalsListener);
         _supervisorModel = new SupervisorModel(
           userRef: _userRef,
-          callback: (List<String> ids, List<String> names, List<Map> data) {
+          callback: (List<String> ids, List<String> names, Map<String, Map> data) {
             /// Invoke setState since _supervisorNames has changed.
             setState(() { _supervisorNames = names; });
           }
         );
         _supervisorModel.startSubscriptions();
+        _elapsedModel = new ElapsedTimeModel(
+          userRef: _userRef,
+          callback: (DrivingTimes timesData) {
+            /// Invoke setState since _userTimes has changed.
+            setState(() { _userTimes = timesData; });
+          }
+        );
+        _elapsedModel.startSubscriptions();
       }
     });
   }
@@ -169,7 +184,7 @@ class _HomeViewState extends State<HomeView> {
     List<StatefulCheckbox> categoryCheckboxes = [];
     /// Add checkboxes for night, poor weather, adverse conditions
     /// if the user has goals for such categories.
-    if (_userGoals.getTime("night") > 0) {
+    if ((_userGoals.getTime("day") > 0) || (_userGoals.getTime("night") > 0)) {
       categoryCheckboxes.add(createCheckbox("Night", 0));
     }
     if (_userGoals.getTime("weather") > 0) {
@@ -249,6 +264,8 @@ class _HomeViewState extends State<HomeView> {
     /// As a placeholder, initialize _supervisorModel and _supervisorNames.
     _supervisorModel = new SupervisorModel(userRef: null, callback: null);
     _supervisorNames = _supervisorModel.supervisorNames;
+    /// Also, initialize _elapsedModel.
+    _elapsedModel = new ElapsedTimeModel(userRef: null, callback: null);
   }
 
   @override
@@ -285,8 +302,10 @@ class _HomeViewState extends State<HomeView> {
       if (_userGoals.getTime(type) > 0) {
         /// Capitalize the goal type:
         String typeCapitalized = type[0].toUpperCase()+type.substring(1);
+        /// Format the time elapsed in _userTimes.
+        String elapsedFormatted = formatMilliseconds(_userTimes.getTime(type));
         /// Add this goal to goalTextObjs.
-        goalTextObjs.add(new Text(typeCapitalized+": 00:00/"+twoDigitFormat.format(_userGoals.getTime(type))+":00", style: textTheme.headline));
+        goalTextObjs.add(new Text("$typeCapitalized: $elapsedFormatted/${twoDigitFormat.format(_userGoals.getTime(type))}:00", style: textTheme.headline));
       }
     }
 
@@ -352,6 +371,7 @@ class _HomeViewState extends State<HomeView> {
     _authSubscription.cancel();
     _goalSubscription?.cancel();
     _supervisorModel.cancelSubscriptions();
+    _elapsedModel.cancelSubscriptions();
     super.dispose();
   }
 }

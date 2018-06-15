@@ -14,12 +14,12 @@ class SupervisorModel {
   /// List of supervisor names.
   List<String> supervisorNames = <String>["No supervisors"];
   /// List of supervisor data.
-  List<Map> supervisorData = <Map>[];
+  Map<String, Map> supervisorData = <String, Map>{};
   /// Callback provided by constructor in order to notify widget of data changes.
-  void Function(List<String>, List<String>, List<Map>) _notifyDataChanged;
+  void Function(List<String>, List<String>, Map<String, Map>) _notifyDataChanged;
 
   /// Checks if supervisor data has a complete name.
-  bool hasCompleteName(dynamic supervisorData) {
+  static bool hasCompleteName(dynamic supervisorData) {
     /// If this is a Map and supervisorData["name"] is a Map,
     /// then check if the "first" and "last" keys are present.
     if (supervisorData is Map && (supervisorData["name"] is Map)) {
@@ -30,7 +30,7 @@ class SupervisorModel {
     else return false;
   }
   /// Generates name for a supervisor based off the Map containing its data.
-  String createSupervisorName(Map supervisorData) {
+  static String createSupervisorName(Map supervisorData) {
     return supervisorData["name"]["first"]+" "+supervisorData["name"]["last"];
   }
 
@@ -43,7 +43,7 @@ class SupervisorModel {
     if (supervisorData.isEmpty) supervisorNames.clear();
     /// Add supervisor data to supervisorNames and supervisorData.
     supervisorNames.add(createSupervisorName(event.snapshot.value));
-    supervisorData.add(event.snapshot.value);
+    supervisorData[event.snapshot.key] = event.snapshot.value;
     /// Notify the widget.
     _notifyDataChanged(supervisorIds, supervisorNames, supervisorData);
   }
@@ -53,7 +53,7 @@ class SupervisorModel {
     int supervisorIndex = _supervisorList.keys.indexOf(event.snapshot.key);
     /// Update supervisorNames, supervisorData.
     supervisorNames[supervisorIndex] = createSupervisorName(event.snapshot.value);
-    supervisorData[supervisorIndex] = event.snapshot.value;
+    supervisorData[event.snapshot.key] = event.snapshot.value;
     /// Notify the widget.
     _notifyDataChanged(supervisorIds, supervisorNames, supervisorData);
   }
@@ -63,7 +63,7 @@ class SupervisorModel {
     int supervisorIndex = _supervisorList.keys.indexOf(event.snapshot.key);
     /// Update supervisorNames, supervisorData.
     supervisorNames.removeAt(supervisorIndex);
-    supervisorData.removeAt(supervisorIndex);
+    supervisorData.remove(event.snapshot.key);
     /// Add "No supervisors" if supervisorNames is empty.
     if (supervisorNames.isEmpty) supervisorNames.add("No supervisors");
     /// Notify the widget.
@@ -71,7 +71,7 @@ class SupervisorModel {
   }
 
   /// Constructor which initializes instance variables
-  SupervisorModel({@required DatabaseReference userRef, @required void Function(List<String>, List<String>, List<Map>) callback})
+  SupervisorModel({@required DatabaseReference userRef, @required void Function(List<String>, List<String>, Map<String, Map>) callback})
     : _supervisorRef = userRef?.child("drivers"),
       _notifyDataChanged = callback {
     /// Instantiate the safe Firebase list.
@@ -85,23 +85,16 @@ class SupervisorModel {
 
   /// Starts subscriptions to _supervisorRef.
   void startSubscriptions() {
-    /// Only make changes if subscriptions have not yet started.
-    if (!_supervisorList.isListening) {
-      /// Start subscriptions using safe callbacks.
-      _supervisorList.startSubscriptions(_supervisorRef);
-    }
+    _supervisorList.startSubscriptions(_supervisorRef);
   }
   /// Cancels subscriptions to _supervisorRef.
   Future<void> cancelSubscriptions() async {
-    /// Only make changes if subscriptions have started
-    if (_supervisorList.isListening) {
-      /// Cancel all subscriptions.
-      await _supervisorList.cancelSubscriptions();
-      /// Clear all the data.
-      supervisorNames.clear();
-      supervisorData.clear();
-      /// Add a default placeholder for the name.
-      supervisorNames.add("No supervisors");
-    }
+    /// Cancel all subscriptions.
+    await _supervisorList.cancelSubscriptions();
+    /// Clear all the data.
+    supervisorNames.clear();
+    supervisorData.clear();
+    /// Add a default placeholder for the name.
+    supervisorNames.add("No supervisors");
   }
 }

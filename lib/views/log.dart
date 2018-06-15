@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 
 /// View to that lists previously logged drives.
-class LogView extends StatelessWidget {
+class LogView extends StatefulWidget {
+  /// Creates the state for this widget.
+  @override
+  State<StatefulWidget> createState() => new _LogViewState();
+}
+
+class _LogViewState extends State<LogView> {
   /// Show a list of drives logged.
   @override
   Widget build(BuildContext context) {

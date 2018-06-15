@@ -33,7 +33,7 @@ class _SupervisorsViewState extends State<SupervisorsView> {
         DatabaseReference userRef = _data.reference().child(user.uid);
         _supervisorModel = new SupervisorModel(
           userRef: userRef,
-          callback: (List<String> ids, List<String> names, List<Map> data) {
+          callback: (List<String> ids, List<String> names, Map<String, Map> data) {
             /// Call setState after updating _supervisorNames.
             setState(() { _supervisorNames = names; });
           }

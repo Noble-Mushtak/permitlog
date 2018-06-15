@@ -1,4 +1,4 @@
-/// Class that holds different amounts of driving hours for different categories
+/// Class that holds different amounts of driving times for different categories.
 class DrivingTimes {
   /// List holding categories of driving times.
   static final List<String> TIME_TYPES = <String>["total", "day", "night", "weather", "adverse"];
@@ -29,5 +29,10 @@ class DrivingTimes {
     if (typeIndex == -1) throw("Invalid driving time type: "+type);
     /// Set the corresponding time.
     _drivingTimes[typeIndex] = time;
+  }
+
+  /// Adds a certain time to the total for a type.
+  void addTime(String type, int time) {
+    setTime(type, getTime(type)+time);
   }
 }
