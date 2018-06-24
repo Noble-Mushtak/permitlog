@@ -1,3 +1,5 @@
+import 'package:firebase_database/firebase_database.dart';
+
 /// Class that holds different amounts of driving times for different categories.
 class DrivingTimes {
   /// List holding categories of driving times.
@@ -34,5 +36,18 @@ class DrivingTimes {
   /// Adds a certain time to the total for a type.
   void addTime(String type, int time) {
     setTime(type, getTime(type)+time);
+  }
+
+  /// Updates the DrivingTimes object based off a Firebase event from the user's goals.
+  void updateWithEvent(Event event) {
+    /// Get the data and go through every type of goal.
+    /// (If the user has not set goals yet, use an empty Map.)
+    Map data = event.snapshot.value ?? new Map();
+    for (String type in DrivingTimes.TIME_TYPES) {
+      /// If the user has this goal, update that goal type.
+      if (data.containsKey(type)) setTime(type, data[type]);
+      /// Otherwise, set the goal to 0.
+      else setTime(type, 0);
+    }
   }
 }

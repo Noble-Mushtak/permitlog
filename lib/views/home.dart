@@ -70,9 +70,10 @@ class _HomeViewState extends State<HomeView> {
     await _goalSubscription?.cancel();
     await _supervisorModel.cancelSubscriptions();
     await _logModel.cancelSubscriptions();
-    /// Reset any variables related to Firebase data.
-    _ongoingDrive = false;
     setState(() {
+      /// Reset any variables related to Firebase data.
+      _ongoingDrive = false;
+
       /// Update _curUser.
       _curUser = user;
       /// If _curUser is null, then _userRef is null.
@@ -105,17 +106,9 @@ class _HomeViewState extends State<HomeView> {
   }
   /// Callback for when new data about the goals come in.
   void _goalsListener(Event event) {
-    /// Encapsulate this in setState because it updates _userGoals.
+    /// Update _userGoals with the event.
     setState(() {
-      /// Get the data and go through every type of goal.
-      /// (If the user has not set goals yet, use an empty Map.)
-      Map data = event.snapshot.value ?? new Map();
-      for (String type in DrivingTimes.TIME_TYPES) {
-        /// If the user has this goal, update _userGoals.
-        if (data.containsKey(type)) _userGoals.setTime(type, data[type]);
-        /// Otherwise, set the goal to 0.
-        else _userGoals.setTime(type, 0);
-      }
+      _userGoals.updateWithEvent(event);
     });
   }
   /// Callback for when user clicks "Start Drive".
@@ -307,7 +300,7 @@ class _HomeViewState extends State<HomeView> {
         /// Format the time elapsed in _userTimes.
         String elapsedFormatted = formatMilliseconds(_userTimes.getTime(type));
         /// Add this goal to goalTextObjs.
-        goalTextObjs.add(new Text("$typeCapitalized: $elapsedFormatted/${twoDigitFormat.format(_userGoals.getTime(type))}:00", style: textTheme.headline));
+        goalTextObjs.add(new Text("$typeCapitalized: $elapsedFormatted/${_userGoals.getTime(type)}:00", style: textTheme.headline));
       }
     }
 
