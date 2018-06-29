@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:permitlog/views/add_supervisor.dart';
 import 'package:permitlog/supervisor_model.dart';
+import 'package:permitlog/utilities.dart';
 
 /// View to that lists supervising drivers.
 class SupervisorsView extends StatefulWidget {
@@ -20,8 +22,8 @@ class _SupervisorsViewState extends State<SupervisorsView> {
   StreamSubscription<FirebaseUser> _authSubscription;
   /// Model for supervisor data.
   SupervisorModel _supervisorModel;
-  /// List of supervisor names.
-  List<String> _supervisorNames;
+  /// List of supervisor IDs and names.
+  List<String> _supervisorIds, _supervisorNames;
 
   /// Callback for when auth state changes.
   Future<void> _updateUser(FirebaseUser user) async {
@@ -34,8 +36,11 @@ class _SupervisorsViewState extends State<SupervisorsView> {
         _supervisorModel = new SupervisorModel(
           userRef: userRef,
           callback: (List<String> ids, List<String> names, Map<String, Map> data) {
-            /// Call setState after updating _supervisorNames.
-            setState(() { _supervisorNames = names; });
+            /// Call setState after updating _supervisorIds, _supervisorNames.
+            setState(() {
+              _supervisorIds = ids;
+              _supervisorNames = names;
+            });
           }
         );
         /// Start listening for data from Firebase.
@@ -49,21 +54,40 @@ class _SupervisorsViewState extends State<SupervisorsView> {
     super.initState();
     /// Subscribe to changes to authentication:
     _authSubscription = _auth.onAuthStateChanged.listen(_updateUser);
-    /// As a placeholder, initialize _supervisorModel and _supervisorNames.
+    /// As a placeholder, initialize supervisor variables.
     _supervisorModel = new SupervisorModel(userRef: null, callback: null);
+    _supervisorIds = _supervisorModel.supervisorIds;
     _supervisorNames = _supervisorModel.supervisorNames;
   }
 
   /// Show a list of supervising drivers.
   @override
   Widget build(BuildContext context) {
+    /// Convert _supervisorNames into a list of ListTiles.
+    List<ListTile> supervisorTiles = [];
+    for (int i = 0; i < _supervisorNames.length; i++) {
+      supervisorTiles.add(new ListTile(
+        title: new Text(_supervisorNames[i]),
+        /// Edit this supervisor when the user taps their name.
+        onTap: () {
+          /// Create a route to AddSupervisorView
+          MaterialPageRoute<String> route = MaterialPageRoute<String>(
+            builder: (context) => new AddSupervisorView(
+              supervisorId: _supervisorIds[i]
+            )
+          );
+          /// When the view is done, show the resulting message.
+          route.popped.then((String msg) => showNonEmptyMessage(context, msg));
+          /// Navigate to the route
+          Navigator.push(context, route);
+        }
+      ));
+    }
+
     return new ListView(
       shrinkWrap: true,
       padding: new EdgeInsets.all(8.0),
-      /// Convert _supervisorNames into a list of ListTiles.
-      children: _supervisorNames.map(
-        (String name) => new ListTile(title: new Text(name))
-      ).toList()
+      children: supervisorTiles
     );
   }
 

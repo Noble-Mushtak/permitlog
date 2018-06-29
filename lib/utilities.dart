@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 /// Returns a String in H:MM format based off milliseconds.
@@ -17,4 +18,14 @@ bool logIsValid(dynamic logData) {
   }
   /// If it's not a Map, it's not valid.
   return false;
+}
+
+/// Helper method that shows non-null messages to user on SnackBar
+void showNonEmptyMessage(BuildContext context, String message) {
+  /// Remove current message
+  Scaffold.of(context).removeCurrentSnackBar();
+  /// Don't show anything if message is null.
+  if (message == null) return;
+  /// Show message
+  Scaffold.of(context).showSnackBar(new SnackBar(content: new Text(message)));
 }

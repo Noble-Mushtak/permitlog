@@ -15,6 +15,8 @@ class GoalsView extends StatefulWidget {
 }
 
 class _GoalsViewState extends State<GoalsView> {
+  /// Key used to identify form
+  GlobalKey<FormState> _formKey;
   /// Instructions for user.
   String _instructions = "Choose your state, or \"Custom\" to enter your own goals. You can edit your goals before you save them, and afterwards. Leave any goal you don't want to track blank.";
   /// Label texts for all the different textboxes.
@@ -53,6 +55,8 @@ class _GoalsViewState extends State<GoalsView> {
     super.initState();
     /// Subscribe to changes to authentication.
     _authSubscription = _auth.onAuthStateChanged.listen(_updateUser);
+    /// Initialize _formKey
+    _formKey = new GlobalKey<FormState>();
   }
 
   /// Called when auth state changes.
@@ -87,6 +91,16 @@ class _GoalsViewState extends State<GoalsView> {
     });
   }
 
+  /// Returns error message is val is not empty and is not int
+  /// (Used in form validation)
+  String _emptyOrInt(String val) {
+    /// Don't check anything if val is empty
+    if ((val == null) || val.isEmpty) return null;
+    /// Return error message if tryParse() fails
+    int valAsInt = int.tryParse(val);
+    return (valAsInt == null) ? "All goals must be integer." : null;
+  }
+
   /// Builds a TextFormField for a goal type based off the goal value.
   TextFormField _createField(String type, int goal) {
     /// If the user doesn't have this goal, then leave make the textbox empty.
@@ -95,7 +109,8 @@ class _GoalsViewState extends State<GoalsView> {
       return new TextFormField(
         decoration: new InputDecoration(labelText: _labelTexts[type]),
         controller: _textControllers[type],
-        keyboardType: TextInputType.number
+        keyboardType: TextInputType.number,
+        validator: _emptyOrInt
       );
     }
     /// If the user does have this goal, put an initial value in the controller.
@@ -106,7 +121,8 @@ class _GoalsViewState extends State<GoalsView> {
       return new TextFormField(
         decoration: new InputDecoration(labelText: _labelTexts[type]),
         controller: _textControllers[type],
-        keyboardType: TextInputType.number
+        keyboardType: TextInputType.number,
+        validator: _emptyOrInt
       );
     }
   }
@@ -116,6 +132,9 @@ class _GoalsViewState extends State<GoalsView> {
     /// Don't do anything if the user is signed in
     /// or if they haven't selected a state.
     if (_userRef == null) return;
+    /// Don't do anything if form validation fails
+    if (!_formKey.currentState.validate()) return;
+
     if (!_stateData.containsKey(_stateSelected)) {
       Scaffold.of(context).showSnackBar(new SnackBar(
         content: new Text("Please select a state.")
@@ -201,24 +220,27 @@ class _GoalsViewState extends State<GoalsView> {
       );
     }
 
-    return new SingleChildScrollView(
-      child: new Padding(
-        padding: new EdgeInsets.all(8.0),
-        child: new Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            new Text(_instructions, style: textTheme.body1),
-            stateDropdown
-          ]
-          /// Add all of the goal inputs.
-          +goalInputs
-          +<Widget>[
-            new RaisedButton(
-              onPressed: _saveGoals,
-              child: new Text("Save"),
-              color: Theme.of(context).buttonColor
-            )
-          ]
+    return new Form(
+      key: _formKey,
+      child: new SingleChildScrollView(
+        child: new Padding(
+          padding: new EdgeInsets.all(8.0),
+          child: new Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              new Text(_instructions, style: textTheme.body1),
+              stateDropdown
+            ]
+            /// Add all of the goal inputs.
+            +goalInputs
+            +<Widget>[
+              new RaisedButton(
+                onPressed: _saveGoals,
+                child: new Text("Save"),
+                color: Theme.of(context).buttonColor
+              )
+            ]
+          )
         )
       )
     );

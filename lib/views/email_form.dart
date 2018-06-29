@@ -44,14 +44,14 @@ class _EmailFormState extends State<EmailForm> {
               decoration: new InputDecoration(hintText: "E-mail"),
               controller: emailController,
               /// Make sure the input is an e-mail.
-              validator: (val) => !emailFormat.hasMatch(val) ? 'Please enter a valid e-mail.' : null
+              validator: (String val) => !emailFormat.hasMatch(val) ? 'Please enter a valid e-mail.' : null
             ),
             new TextFormField(
               decoration: new InputDecoration(hintText: "Password"),
               obscureText: true,
               controller: passwordController,
               /// Make sure the input is at least 6 characters (Firebase requirement).
-              validator: (val) => val.length < 6 ? 'Password needs >=6 characters.' : null
+              validator: (String val) => val.length < 6 ? 'Password needs >=6 characters.' : null
             )
           ],
         )

@@ -5,8 +5,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:permitlog/utilities.dart';
 
 import 'views/about.dart';
+import 'views/add_supervisor.dart';
 import 'views/email_form.dart';
 import 'views/goals.dart';
 import 'views/home.dart';
@@ -60,35 +62,38 @@ class _PermitLogState extends State<PermitLog> {
   final FacebookLogin _facebookLogin = new FacebookLogin();
 
   /// Style for [Drawer] menu items.
-  final TextStyle menuText = new TextStyle(color: Colors.white);
+  final TextStyle _menuText = new TextStyle(color: Colors.white);
 
   /// Content for the current state.
-  String title = 'Home';
-  Widget content = new HomeView();
+  String _title = 'Home';
+  Widget _content = new HomeView();
+  _PermitLogTabs _curTab = _PermitLogTabs.home;
 
   /// Sets the [AppBar]'s title and navigates to the view indicated.
   void _navTo(_PermitLogTabs tab, {bool fromDrawer = false}) {
     setState(() {
+      // Update _curTab
+      _curTab = tab;
       switch(tab) {
         case _PermitLogTabs.home:
-          this.title = "Home";
-          this.content = new HomeView();
+          this._title = "Home";
+          this._content = new HomeView();
           break;
         case _PermitLogTabs.log:
-          this.title = "Log";
-          this.content = new LogView();
+          this._title = "Log";
+          this._content = new LogView();
           break;
         case _PermitLogTabs.supervisors:
-          this.title = "Supervisors";
-          this.content = new SupervisorsView();
+          this._title = "Supervisors";
+          this._content = new SupervisorsView();
           break;
         case _PermitLogTabs.about:
-          this.title = "About";
-          this.content = new AboutView();
+          this._title = "About";
+          this._content = new AboutView();
           break;
         case _PermitLogTabs.goals:
-          this.title = "Goals";
-          this.content = new GoalsView();
+          this._title = "Goals";
+          this._content = new GoalsView();
           break;
         default:
           break;
@@ -276,12 +281,54 @@ class _PermitLogState extends State<PermitLog> {
     ));
   }
 
+  /// Shows dialog to add supervisor or drive when fab is clicked in Home tab
+  void _showAddDialog(BuildContext outerContext) {
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext context) => new AlertDialog(
+        content: new Text("Would you like to add a supervisor or a drive log?"),
+        actions: <Widget>[
+          new FlatButton(
+            child: new Text("Add Supervisor"),
+            onPressed: () {
+              /// Close the dialog
+              Navigator.pop(context);
+              /// Create a route to AddSupervisorView
+              MaterialPageRoute<String> route = MaterialPageRoute<String>(
+                builder: (context) => new AddSupervisorView()
+              );
+              /// When the view is done, show the resulting message.
+              route.popped.then((String msg) => showNonEmptyMessage(outerContext, msg));
+              /// Navigate to the route.
+              Navigator.push(context, route);
+            }
+          )
+        ],
+      )
+    );
+  }
+
   /// Builds the current state.
   @override
   Widget build(BuildContext context) {
+    /// The FloatingActionButton at the bottom-right side of the screen
+    Widget fab;
+    if (_curTab == _PermitLogTabs.home) {
+      /// Allow the user to add supervisor/drive from Home tab
+      fab = new Builder(
+        builder: (BuildContext context) => new FloatingActionButton.extended(
+          /// Pass the context into _showAddDialog for SnackBar
+          onPressed: () => _showAddDialog(context),
+          label: new Text("Add Supervisor or Drive"),
+          icon: new Icon(Icons.add_circle, color: Colors.white),
+          backgroundColor: new Color.fromARGB(255, 255, 87, 34),
+        )
+      );
+    }
+
     return new Scaffold(
       appBar: new AppBar(
-        title: new Text(this.title),
+        title: new Text(this._title),
         backgroundColor: Colors.blueAccent,
       ),
       /// Authenticate the user inside a Builder
@@ -291,7 +338,7 @@ class _PermitLogState extends State<PermitLog> {
           /// Try to authenticate the user as soon as possible:
           if (_curUser == null) _authenticateUser(context);
 
-          return this.content;
+          return this._content;
         }
       ),
       drawer: new Drawer(
@@ -301,32 +348,32 @@ class _PermitLogState extends State<PermitLog> {
             children: <Widget>[
               new ListTile(
                 leading: new Icon(Icons.home, color: Colors.white,),
-                title: new Text("Home", style: this.menuText,),
+                title: new Text("Home", style: this._menuText,),
                 onTap: () => this._navTo(_PermitLogTabs.home, fromDrawer: true),
               ),
               new ListTile(
                 leading: new Icon(Icons.assignment, color: Colors.white,),
-                title: new Text("Log", style: this.menuText,),
+                title: new Text("Log", style: this._menuText,),
                 onTap: () => this._navTo(_PermitLogTabs.log, fromDrawer: true),
               ),
               new ListTile(
                 leading: new Icon(Icons.supervisor_account, color: Colors.white,),
-                title: new Text("Supervisors", style: this.menuText,),
+                title: new Text("Supervisors", style: this._menuText,),
                 onTap: () => this._navTo(_PermitLogTabs.supervisors, fromDrawer: true),
               ),
               new ListTile(
                 leading: new Icon(Icons.settings, color: Colors.white,),
-                title: new Text("Goals", style: this.menuText,),
+                title: new Text("Goals", style: this._menuText,),
                 onTap: () => this._navTo(_PermitLogTabs.goals, fromDrawer: true),
               ),
               new ListTile(
                 leading: new Icon(Icons.alarm, color: Colors.white,),
-                title: new Text("About", style: this.menuText,),
+                title: new Text("About", style: this._menuText,),
                 onTap: () => this._navTo(_PermitLogTabs.about, fromDrawer: true),
               ),
               new ListTile(
                 leading: new Icon(Icons.exit_to_app, color: Colors.white,),
-                title: new Text("Sign Out", style: this.menuText,),
+                title: new Text("Sign Out", style: this._menuText,),
                 onTap: () {
                   /// Sign the user out, reset _curUser, and call setState.
                   _googleSignIn.signOut();
@@ -340,6 +387,7 @@ class _PermitLogState extends State<PermitLog> {
           ),
         ),
       ),
+      floatingActionButton: fab
     );
   }
 }
