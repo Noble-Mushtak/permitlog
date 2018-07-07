@@ -60,7 +60,7 @@ class _HomeViewState extends State<HomeView> {
   /// Tells user to add supervisor.
   void _supervisorWarning() {
     Scaffold.of(context).showSnackBar(new SnackBar(
-        content: new Text("Please add the supervisor accompanying you by tapping the plus sign in the bottom right, and tapping \"Add Supervisor\""),
+        content: new Text("Please add the supervisor accompanying you by tapping the button in the bottom right"),
         duration: new Duration(seconds: 5),
     ));
   }
@@ -305,13 +305,7 @@ class _HomeViewState extends State<HomeView> {
     }
 
     /// List of items for each supervisor.
-    List<DropdownMenuItem<num>> supervisorItems = <DropdownMenuItem<num>>[];
-    /// Make an item for each supervisor.
-    for (int i = 0; i < _supervisorNames.length; i++) {
-      supervisorItems.add(
-        new DropdownMenuItem<num>(value: i, child: new Text(_supervisorNames[i]))
-      );
-    }
+    List<DropdownMenuItem<num>> supervisorItems = createDropdownItems(_supervisorNames);
     /// Also, make sure _supervisorIndex is a valid index of _supervisorNames.
     _supervisorIndex = min(_supervisorIndex, _supervisorNames.length-1);
 

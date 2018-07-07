@@ -70,16 +70,21 @@ class _SupervisorsViewState extends State<SupervisorsView> {
         title: new Text(_supervisorNames[i]),
         /// Edit this supervisor when the user taps their name.
         onTap: () {
-          /// Create a route to AddSupervisorView
-          MaterialPageRoute<String> route = MaterialPageRoute<String>(
-            builder: (context) => new AddSupervisorView(
-              supervisorId: _supervisorIds[i]
-            )
-          );
-          /// When the view is done, show the resulting message.
-          route.popped.then((String msg) => showNonEmptyMessage(context, msg));
-          /// Navigate to the route
-          Navigator.push(context, route);
+          /// Only do something if this is a valid index of _supervisorIds
+          if (i < _supervisorIds.length) {
+            /// Create a route to AddSupervisorView
+            MaterialPageRoute<String> route = MaterialPageRoute<String>(
+              builder: (context) => new AddSupervisorView(
+                supervisorId: _supervisorIds[i]
+              )
+            );
+
+            /// When the view is done, show the resulting message.
+            route.popped.then((String msg) => showNonEmptyMessage(context, msg));
+
+            /// Navigate to the route
+            Navigator.push(context, route);
+          }
         }
       ));
     }

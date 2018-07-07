@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 /// Stateful version of CheckboxListTile
 class StatefulCheckbox extends StatefulWidget {
   /// Properties to be passed onto State object.
-  String _title;
-  bool _initValue;
-  void Function(bool) _callback;
+  final String _title;
+  final bool _initValue;
+  final void Function(bool) _callback;
   /// Constructor that sets instance variables
   StatefulCheckbox({@required String title, @required bool value, @required void Function(bool) onChanged})
     : _title = title, _initValue = value, _callback = onChanged;

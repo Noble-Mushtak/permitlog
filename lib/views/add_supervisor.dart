@@ -4,10 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 
-/// View that allows user to add a supervisor
+/// View that allows user to add or edit a supervisor
 class AddSupervisorView extends StatefulWidget {
   /// String storing the ID of supervisor being edited
-  String _supervisorId;
+  final String _supervisorId;
   AddSupervisorView({String supervisorId}) : _supervisorId = supervisorId;
 
   /// Creates the state for this widget.
@@ -23,6 +23,8 @@ class _AddSupervisorViewState extends State<AddSupervisorView> {
   GlobalKey<FormState> _formKey;
   /// Subscription that listens for changes to authentication.
   StreamSubscription<FirebaseUser> _authSubscription;
+  /// Subscription that listens for data about the supervisor being edited.
+  StreamSubscription<Event> _supervisorSubscription;
   /// Database reference to all the user's supervisor data
   DatabaseReference _supervisorsRef;
   /// Controllers used to get data from text form fields
@@ -38,17 +40,19 @@ class _AddSupervisorViewState extends State<AddSupervisorView> {
   @override
   void initState() {
     super.initState();
-    /// Initialize _formKey and controllers:
+    /// Initialize _formKey and controllers.
     _formKey = new GlobalKey<FormState>();
     _firstNameController = new TextEditingController();
     _lastNameController = new TextEditingController();
     _licenseController = new TextEditingController();
     _ageController = new TextEditingController();
-    /// Subscribe to auth state changes:
+    /// Subscribe to auth state changes.
     _authSubscription = _auth.onAuthStateChanged.listen(_updateUser);
   }
 
   Future<void> _updateUser(FirebaseUser user) async {
+    /// Cancel any pending subscriptions
+    await _supervisorSubscription?.cancel();
     setState(() {
       /// Reset variables related to user.
       _supervisorsRef = null;
@@ -58,17 +62,18 @@ class _AddSupervisorViewState extends State<AddSupervisorView> {
         /// If we are editing an existing supervisor,
         /// try to get their data.
         if (_supervisorId != null) {
-          _supervisorsRef.child(_supervisorId).once().then(_setSupervisorData);
+          _supervisorSubscription =
+            _supervisorsRef.child(_supervisorId).onValue.listen(_setSupervisorData);
         }
       }
     });
   }
 
-  /// Sets initial data for supervisor
-  void _setSupervisorData(DataSnapshot snapshot) {
+  /// Sets data for supervisor being edited
+  void _setSupervisorData(Event event) {
     setState(() {
       /// Get the supervisor data
-      Map supervisorData = snapshot.value ?? new Map();
+      Map supervisorData = event.snapshot.value ?? new Map();
       /// If there is a name:
       if (supervisorData.containsKey("name")) {
         /// Set the first and last name if possible
@@ -255,13 +260,14 @@ class _AddSupervisorViewState extends State<AddSupervisorView> {
       ),
       /// Use _innerBuild to get the body
       body: new Builder(builder: _innerBuild)
-  );
+    );
   }
 
   @override
   void dispose() {
     /// Cancel any ongoing subscriptions before the widget is disposed.
     _authSubscription.cancel();
+    _supervisorSubscription?.cancel();
     super.dispose();
   }
 }

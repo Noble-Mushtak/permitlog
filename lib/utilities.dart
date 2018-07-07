@@ -29,3 +29,16 @@ void showNonEmptyMessage(BuildContext context, String message) {
   /// Show message
   Scaffold.of(context).showSnackBar(new SnackBar(content: new Text(message)));
 }
+
+/// Returns a list of menu items that show each String in data using child,
+/// but have the value of the index of that String in data
+List<DropdownMenuItem<num>> createDropdownItems(List<String> data) {
+  List<DropdownMenuItem<num>> items = [];
+  /// Add an item for each String in data.
+  for (int i = 0; i < data.length; i++) {
+    items.add(
+      new DropdownMenuItem<num>(value: i, child: new Text(data[i]))
+    );
+  }
+  return items;
+}

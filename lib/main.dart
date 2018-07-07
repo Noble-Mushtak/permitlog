@@ -8,6 +8,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:permitlog/utilities.dart';
 
 import 'views/about.dart';
+import 'views/add_log.dart';
 import 'views/add_supervisor.dart';
 import 'views/email_form.dart';
 import 'views/goals.dart';
@@ -20,6 +21,15 @@ enum _SignInOptions {
   google,
   email,
   facebook
+}
+
+/// Enum representing the different tabs in the drawer.
+enum _PermitLogTabs {
+  home,
+  log,
+  supervisors,
+  about,
+  goals
 }
 
 /// Main function, creates a new [MaterialApp] whose home widget is [PermitLog].
@@ -37,15 +47,6 @@ class PermitLog extends StatefulWidget {
   /// Creates the state for the app's main widget.
   @override
   State<StatefulWidget> createState() => new _PermitLogState();
-}
-
-/// Enum representing the different tabs in the drawer.
-enum _PermitLogTabs {
-  home,
-  log,
-  supervisors,
-  about,
-  goals
 }
 
 /// [State] for the [PermitLog] widget.
@@ -281,6 +282,20 @@ class _PermitLogState extends State<PermitLog> {
     ));
   }
 
+  /// Opens a new widget after dialog option is selected using builder function
+  void _navigateRoute(BuildContext outerContext, Widget Function(BuildContext) builder) {
+    /// Closes the dialog
+    Navigator.pop(context);
+    /// Create a route using builder function
+    MaterialPageRoute<String> route = new MaterialPageRoute<String>(
+      builder: builder
+    );
+    /// When the view is done, show the resulting message.
+    route.popped.then((String msg) => showNonEmptyMessage(outerContext, msg));
+    /// Navigate to the route.
+    Navigator.push(context, route);
+  }
+
   /// Shows dialog to add supervisor or drive when fab is clicked in Home tab
   void _showAddDialog(BuildContext outerContext) {
     showDialog<void>(
@@ -290,17 +305,16 @@ class _PermitLogState extends State<PermitLog> {
         actions: <Widget>[
           new FlatButton(
             child: new Text("Add Supervisor"),
+            /// Navigate to AddSupervisorView
             onPressed: () {
-              /// Close the dialog
-              Navigator.pop(context);
-              /// Create a route to AddSupervisorView
-              MaterialPageRoute<String> route = MaterialPageRoute<String>(
-                builder: (context) => new AddSupervisorView()
-              );
-              /// When the view is done, show the resulting message.
-              route.popped.then((String msg) => showNonEmptyMessage(outerContext, msg));
-              /// Navigate to the route.
-              Navigator.push(context, route);
+              _navigateRoute(outerContext, (context) => new AddSupervisorView());
+            }
+          ),
+          new FlatButton(
+            child: new Text("Add Drive Log"),
+            /// Navigate to AddLogView
+            onPressed: () {
+            _navigateRoute(outerContext, (context) => new AddLogView());
             }
           )
         ],
