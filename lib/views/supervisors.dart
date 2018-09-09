@@ -7,7 +7,7 @@ import 'package:permitlog/views/add_supervisor.dart';
 import 'package:permitlog/supervisor_model.dart';
 import 'package:permitlog/utilities.dart';
 
-/// View to that lists supervising drivers.
+/// View tethat lists supervising drivers.
 class SupervisorsView extends StatefulWidget {
   /// Creates the state for this widget.
   @override

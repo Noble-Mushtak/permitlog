@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_facebook_login/flutter_facebook_login.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -13,6 +14,7 @@ import 'views/add_supervisor.dart';
 import 'views/email_form.dart';
 import 'views/goals.dart';
 import 'views/home.dart';
+import 'views/learners.dart';
 import 'views/log.dart';
 import 'views/supervisors.dart';
 
@@ -28,6 +30,7 @@ enum _PermitLogTabs {
   home,
   log,
   supervisors,
+  learners,
   about,
   goals
 }
@@ -51,8 +54,9 @@ class PermitLog extends StatefulWidget {
 
 /// [State] for the [PermitLog] widget.
 class _PermitLogState extends State<PermitLog> {
-  /// Firebase Auth API Interface
+  /// Firebase API Interfaces
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseDatabase _data = FirebaseDatabase.instance;
   /// Firebase User Object
   FirebaseUser _curUser;
   /// Create GoogleSignIn instance that allows us to access their e-mail and OpenID.
@@ -87,6 +91,10 @@ class _PermitLogState extends State<PermitLog> {
         case _PermitLogTabs.supervisors:
           this._title = "Supervisors";
           this._content = new SupervisorsView();
+          break;
+        case _PermitLogTabs.learners:
+          this._title = "Learners";
+          this._content = new LearnersView();
           break;
         case _PermitLogTabs.about:
           this._title = "About";
@@ -275,6 +283,7 @@ class _PermitLogState extends State<PermitLog> {
           break;
       }
     }
+
     /// Once authentication succeeds, tell the user.
     Scaffold.of(context).removeCurrentSnackBar();
     Scaffold.of(context).showSnackBar(new SnackBar(
@@ -374,6 +383,11 @@ class _PermitLogState extends State<PermitLog> {
                 leading: new Icon(Icons.supervisor_account, color: Colors.white,),
                 title: new Text("Supervisors", style: this._menuText,),
                 onTap: () => this._navTo(_PermitLogTabs.supervisors, fromDrawer: true),
+              ),
+              new ListTile(
+                leading: new Icon(Icons.person, color: Colors.white,),
+                title: new Text("Learners", style: this._menuText,),
+                onTap: () => this._navTo(_PermitLogTabs.learners, fromDrawer: true)
               ),
               new ListTile(
                 leading: new Icon(Icons.settings, color: Colors.white,),

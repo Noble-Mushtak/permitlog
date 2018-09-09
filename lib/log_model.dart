@@ -17,7 +17,7 @@ class LogModel {
   List<String> get logIds => _logList.keys;
   /// List of log summaries.
   List<String> logSummaries = <String>["No logs"];
-  /// Map that pairs keys to log data to the log data
+  /// Map that pairs log keys to the log data
   Map<String, Map> logData = <String, Map>{};
   /// Object that stores the time the user has driven for each category.
   /// NOTE: These times are stored in milliseconds.

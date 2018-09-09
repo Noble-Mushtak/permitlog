@@ -20,6 +20,23 @@ bool logIsValid(dynamic logData) {
   return false;
 }
 
+/// Checks if some data about a person has a complete name.
+bool hasCompleteName(dynamic personData) {
+  /// If this is a Map and personData["name"] is a Map,
+  /// then check if the "first" and "last" keys are present.
+  if (personData is Map && (personData["name"] is Map)) {
+    return personData["name"].containsKey("first")
+        && personData["name"].containsKey("last");
+  }
+  /// Otherwise, just return false.
+  else return false;
+}
+
+/// Creates name based off data about person.
+String createName(Map personData) {
+  return personData["name"]["first"]+" "+personData["name"]["last"];
+}
+
 /// Helper method that shows non-null messages to user on SnackBar
 void showNonEmptyMessage(BuildContext context, String message) {
   /// Remove current message

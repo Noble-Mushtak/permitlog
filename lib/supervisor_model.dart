@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:permitlog/safe_firebase_list.dart';
+import 'package:permitlog/utilities.dart';
 
 /// Class that manages subscriptions and data related to supervisors.
 class SupervisorModel {
@@ -18,22 +19,6 @@ class SupervisorModel {
   /// Callback provided by constructor in order to notify widget of data changes.
   void Function(List<String>, List<String>, Map<String, Map>) _notifyDataChanged;
 
-  /// Checks if supervisor data has a complete name.
-  static bool hasCompleteName(dynamic supervisorData) {
-    /// If this is a Map and supervisorData["name"] is a Map,
-    /// then check if the "first" and "last" keys are present.
-    if (supervisorData is Map && (supervisorData["name"] is Map)) {
-      return supervisorData["name"].containsKey("first")
-          && supervisorData["name"].containsKey("last");
-    }
-    /// Otherwise, just return false.
-    else return false;
-  }
-  /// Generates name for a supervisor based off the Map containing its data.
-  static String createSupervisorName(Map supervisorData) {
-    return supervisorData["name"]["first"]+" "+supervisorData["name"]["last"];
-  }
-
   /// DatabaseReference to supervisor data.
   DatabaseReference _supervisorRef;
   /// onChildAdded callback for supervisors data.
@@ -42,7 +27,7 @@ class SupervisorModel {
     /// so get rid of that.
     if (supervisorData.isEmpty) supervisorNames.clear();
     /// Add supervisor data to supervisorNames and supervisorData.
-    supervisorNames.add(createSupervisorName(event.snapshot.value));
+    supervisorNames.add(createName(event.snapshot.value));
     supervisorData[event.snapshot.key] = event.snapshot.value;
     /// Notify the widget.
     _notifyDataChanged(supervisorIds, supervisorNames, supervisorData);
@@ -52,7 +37,7 @@ class SupervisorModel {
     /// Get the index of the item changed.
     int supervisorIndex = _supervisorList.keys.indexOf(event.snapshot.key);
     /// Update supervisorNames, supervisorData.
-    supervisorNames[supervisorIndex] = createSupervisorName(event.snapshot.value);
+    supervisorNames[supervisorIndex] = createName(event.snapshot.value);
     supervisorData[event.snapshot.key] = event.snapshot.value;
     /// Notify the widget.
     _notifyDataChanged(supervisorIds, supervisorNames, supervisorData);
