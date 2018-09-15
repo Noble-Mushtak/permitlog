@@ -94,8 +94,8 @@ class LogModel {
     _notifyDataChanged(logIds, logSummaries, timeElapsed, logData);
   }
 
-  LogModel({@required DatabaseReference userRef, @required void Function(List<String>, List<String>, DrivingTimes, Map<String, Map>) callback})
-    : _timesRef = userRef?.child("times"),
+  LogModel({@required DatabaseReference learnerRef, @required void Function(List<String>, List<String>, DrivingTimes, Map<String, Map>) callback})
+    : _timesRef = learnerRef?.child("times"),
       _notifyDataChanged = callback {
     _logList = new SafeFirebaseList(
         completeCallback: logIsValid,

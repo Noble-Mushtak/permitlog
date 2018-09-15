@@ -66,26 +66,30 @@ class _SupervisorsViewState extends State<SupervisorsView> {
     /// Convert _supervisorNames into a list of ListTiles.
     List<ListTile> supervisorTiles = [];
     for (int i = 0; i < _supervisorNames.length; i++) {
-      supervisorTiles.add(new ListTile(
-        title: new Text(_supervisorNames[i]),
-        /// Edit this supervisor when the user taps their name.
-        onTap: () {
-          /// Only do something if this is a valid index of _supervisorIds
-          if (i < _supervisorIds.length) {
+      /// Only add an edit button if this is a valid index of _supervisorIds
+      Widget editButton;
+      if (i < _supervisorIds.length) {
+        editButton = new FlatButton(
+          child: new Icon(Icons.edit, color: Colors.black),
+          /// Edit this supervisor when the user taps pencil icon.
+          onPressed: () {
             /// Create a route to AddSupervisorView
             MaterialPageRoute<String> route = MaterialPageRoute<String>(
               builder: (context) => new AddSupervisorView(
                 supervisorId: _supervisorIds[i]
               )
             );
-
             /// When the view is done, show the resulting message.
             route.popped.then((String msg) => showNonEmptyMessage(context, msg));
-
             /// Navigate to the route
             Navigator.push(context, route);
           }
-        }
+        );
+      }
+
+      supervisorTiles.add(new ListTile(
+        title: new Text(_supervisorNames[i]),
+        trailing: editButton
       ));
     }
 

@@ -7,10 +7,11 @@ import 'package:flutter/material.dart';
 import 'package:permitlog/driving_times.dart';
 import 'package:permitlog/supervisor_model.dart';
 import 'package:permitlog/utilities.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// View that allows user to add or edit a log
 class AddLogView extends StatefulWidget {
-  /// String storing the ID of log being edited
+  /// String storing ID of log being edited.
   final String _logId;
   AddLogView({String logId}) : _logId = logId;
 
@@ -28,12 +29,15 @@ class _AddLogViewState extends State<AddLogView> {
   /// Subscription that listens for changes to user's goal data
   /// or to the log being edited
   StreamSubscription<Event> _goalSubscription, _logSubscription;
-  /// Database reference to all the user's data and all the user's log data
-  DatabaseReference _userRef, _logRef;
+  /// Database reference to all the user's data, all the learner's data,
+  /// and all the learner's log data
+  DatabaseReference _userRef, _learnerRef, _logRef;
   /// Database reference to all the user's goal data
   DatabaseReference _goalRef;
   /// Model for supervisor data.
   SupervisorModel _supervisorModel;
+  /// Object used to get user preferences.
+  SharedPreferences _prefs;
   /// List of supervisor IDs and names.
   List<String> _supervisorIds, _supervisorNames;
   /// User's goal data
@@ -48,7 +52,7 @@ class _AddLogViewState extends State<AddLogView> {
   /// ID of supervisor for this drive log
   String _supervisorId;
 
-  /// ID of log being edited
+  /// Set ID of log being edited in constructor.
   final String _logId;
   _AddLogViewState(String logId) : _logId = logId;
 
@@ -77,15 +81,22 @@ class _AddLogViewState extends State<AddLogView> {
     await _supervisorModel.cancelSubscriptions();
     await _goalSubscription?.cancel();
     await _logSubscription?.cancel();
+    /// Initialize _prefs if necessary
+    if (_prefs == null) {
+      _prefs = await SharedPreferences.getInstance();
+    }
     setState(() {
       /// Reset variables related to user.
-      _userRef = _logRef = _goalRef = null;
+      _userRef = _learnerRef = _logRef = _goalRef = null;
       _goalData = new DrivingTimes();
       if (user != null) {
+        /// Get the ID of the current learner from preferences.
+        String _currentLearnerKey = _prefs.getString("current_learner") ?? "";
         /// If user is signed in, initialize variables related to user.
         _userRef = _data.reference().child(user.uid);
-        _logRef = _userRef.child("times");
-        _goalRef = _userRef.child("goals");
+        _learnerRef = getCurrentLearnerRef(_userRef, _currentLearnerKey);
+        _logRef = _learnerRef.child("times");
+        _goalRef = _learnerRef.child("goals");
         /// Also, start listening to data related to goals and supervisors.
         _goalSubscription = _goalRef.onValue.listen((Event event) {
           /// Update _goalData when there is new goal data.

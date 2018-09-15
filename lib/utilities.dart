@@ -1,5 +1,7 @@
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Returns a String in H:MM format based off milliseconds.
 String formatMilliseconds(int mseconds) {
@@ -7,6 +9,14 @@ String formatMilliseconds(int mseconds) {
   Duration duration = new Duration(milliseconds: mseconds);
   int minutes = duration.inMinutes % Duration.minutesPerHour;
   return "${duration.inHours}:${twoDigitFormat.format(minutes)}";
+}
+
+/// Gets reference to data for current learner.
+DatabaseReference getCurrentLearnerRef(DatabaseReference userRef, String learnerKey) {
+  /// If this is the default learner, just return userRef.
+  if (learnerKey.isEmpty) return userRef;
+  /// Otherwise, return the appropriate subchild of learners.
+  return userRef.child("learners").child(learnerKey);
 }
 
 /// Checks if log has all necessary data.

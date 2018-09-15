@@ -6,10 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:permitlog/driving_times.dart';
+import 'package:permitlog/learner_model.dart';
 import 'package:permitlog/log_model.dart';
 import 'package:permitlog/views/stateful_checkbox.dart';
 import 'package:permitlog/supervisor_model.dart';
 import 'package:permitlog/utilities.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// View that serves as the home screen for the PermitLog app. Displays
 /// the current drive timer and totals for the user's goals.
@@ -27,8 +29,10 @@ class _HomeViewState extends State<HomeView> {
   StreamSubscription<FirebaseUser> _authSubscription;
   /// Firebase User Object
   FirebaseUser _curUser;
-  /// Reference to all of the user's data.
-  DatabaseReference _userRef;
+  /// Reference to all of the user's data, learner's data.
+  DatabaseReference _userRef, _learnerRef;
+  /// Object used to edit preferences.
+  SharedPreferences _prefs;
   /// Object that holds time the user has completed in each category.
   /// These times are stored in milliseconds.
   DrivingTimes _userTimes = new DrivingTimes();
@@ -39,6 +43,8 @@ class _HomeViewState extends State<HomeView> {
   StreamSubscription<Event> _goalSubscription;
   /// Model that manages all of the supervisor data.
   SupervisorModel _supervisorModel;
+  /// Model that manages all of the learner data.
+  LearnerModel _learnerModel;
   /// Model that calculates the time the user has driven in each category.
   LogModel _logModel;
   /// List of all the supervisor names.
@@ -46,6 +52,8 @@ class _HomeViewState extends State<HomeView> {
 
   /// Index of selected supervisor.
   int _supervisorIndex = 0;
+  /// Key and name of current learner (key is empty if default learner).
+  String _currentLearnerKey, _currentLearnerName = "";
   /// Boolean describing if there is an ongoing drive.
   bool _ongoingDrive = false;
   /// Reference to the user's ongoing drive.
@@ -64,12 +72,18 @@ class _HomeViewState extends State<HomeView> {
         duration: new Duration(seconds: 5),
     ));
   }
+
   /// Callback for when user is updated.
   Future<void> _updateUser(FirebaseUser user) async {
     /// When the user changes, stop all subscriptions:
     await _goalSubscription?.cancel();
     await _supervisorModel.cancelSubscriptions();
+    await _learnerModel.cancelSubscriptions();
     await _logModel.cancelSubscriptions();
+    /// Initialize _prefs if necessary.
+    if (_prefs == null) {
+      _prefs = await SharedPreferences.getInstance();
+    }
     setState(() {
       /// Reset any variables related to Firebase data.
       _ongoingDrive = false;
@@ -83,8 +97,7 @@ class _HomeViewState extends State<HomeView> {
         _userRef = _data.reference().child(_curUser.uid);
         /// Update any other DatabaseReferences.
         _ongoingRef = _userRef.child("ongoing");
-        /// Also, start the subscriptions.
-        _goalSubscription = _userRef.child("goals").onValue.listen(_goalsListener);
+        /// Start listening to supervisor data.
         _supervisorModel = new SupervisorModel(
           userRef: _userRef,
           callback: (List<String> ids, List<String> names, Map<String, Map> data) {
@@ -93,17 +106,41 @@ class _HomeViewState extends State<HomeView> {
           }
         );
         _supervisorModel.startSubscriptions();
-        _logModel = new LogModel(
+        /// Start listening to learner data.
+        _learnerModel = new LearnerModel(
           userRef: _userRef,
+          callback: _updateLearner
+        );
+        _learnerModel.startSubscriptions();
+
+        /// Update _currentLearnerKey, _learnerRef, _logModel.
+        _currentLearnerKey = _prefs.getString("current_learner") ?? "";
+        _learnerRef = getCurrentLearnerRef(_userRef, _currentLearnerKey);
+        _logModel = new LogModel(
+          learnerRef: _learnerRef,
           callback: (List<String> logIds, List<String> logSummaries, DrivingTimes timesData, Map<String, Map> logData) {
             /// Invoke setState since _userTimes has changed.
             setState(() { _userTimes = timesData; });
           }
         );
+        /// Start listening to new logs and goals.
         _logModel.startSubscriptions();
+        _goalSubscription = _learnerRef.child("goals").onValue.listen(_goalsListener);
       }
     });
   }
+
+  /// Updates the current learner.
+  Future<void> _updateLearner(List<String> learnerIds, List<String> learnerNames) async {
+    /// Get the index of the current learner (use 0 by default).
+    int currentLearnerIndex = 0;
+    if (learnerIds.contains(_currentLearnerKey)) {
+      currentLearnerIndex = learnerIds.indexOf(_currentLearnerKey)+1;
+    }
+    /// Update learner name.
+    setState(() { _currentLearnerName = learnerNames[currentLearnerIndex]; });
+  }
+
   /// Callback for when new data about the goals come in.
   void _goalsListener(Event event) {
     /// Update _userGoals with the event.
@@ -236,7 +273,7 @@ class _HomeViewState extends State<HomeView> {
     int msDifference = _ongoingDuration.inMicroseconds % Duration.microsecondsPerMinute;
     _endingTime = _endingTime.subtract(new Duration(microseconds: msDifference));
     /// Save the drive in the database.
-    DatabaseReference driveRef = _userRef.child("times").push();
+    DatabaseReference driveRef = _learnerRef.child("times").push();
     driveRef.set(<String, dynamic>{
       "start": _startingTime.millisecondsSinceEpoch,
       "end": _endingTime.millisecondsSinceEpoch,
@@ -259,8 +296,9 @@ class _HomeViewState extends State<HomeView> {
     /// As a placeholder, initialize _supervisorModel and _supervisorNames.
     _supervisorModel = new SupervisorModel(userRef: null, callback: null);
     _supervisorNames = _supervisorModel.supervisorNames;
-    /// Also, initialize _logModel.
-    _logModel = new LogModel(userRef: null, callback: null);
+    /// Also, initialize _logModel, _learnerModel.
+    _learnerModel = new LearnerModel(userRef: null, callback: null);
+    _logModel = new LogModel(learnerRef: null, callback: null);
   }
 
   @override
@@ -310,48 +348,51 @@ class _HomeViewState extends State<HomeView> {
     _supervisorIndex = min(_supervisorIndex, _supervisorNames.length-1);
 
     return new SingleChildScrollView(
-        child: new Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              new Card(
-                  child: new Column(
-                      children: <Widget>[
-                        new Text(ongoingLabel, textAlign: TextAlign.center, style: textTheme.headline),
-                        new Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: <Widget>[
-                              new RaisedButton(
-                                  onPressed: startCallback,
-                                  child: new Text("Start Drive"),
-                                  color: Theme.of(context).buttonColor
-                              ),
-                              new RaisedButton(
-                                  onPressed: stopCallback,
-                                  child: new Text("Stop Drive"),
-                                  color: Theme.of(context).buttonColor
-                              )
-                            ]
-                        ),
-                        new DropdownButton<num>(
-                            value: _supervisorIndex,
-                            items: supervisorItems,
-                            /// When user selects supervisor,
-                            /// update _supervisorIndex.
-                            onChanged: (num index) {
-                              setState(() { _supervisorIndex = index; });
-                            }
-                        )
-                      ]
-                  )
-              ),
-              new Card(
-                  child: new Column(
-                    children: goalTextObjs,
-                  )
-              )
-            ]
-        )
-      );
+      child: new Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          new Card(
+            child: new Text("Hello, $_currentLearnerName", textAlign: TextAlign.center, style: textTheme.headline,)
+          ),
+          new Card(
+            child: new Column(
+              children: <Widget>[
+                new Text(ongoingLabel, textAlign: TextAlign.center, style: textTheme.headline),
+                new Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    new RaisedButton(
+                      onPressed: startCallback,
+                      child: new Text("Start Drive"),
+                      color: Theme.of(context).buttonColor
+                    ),
+                    new RaisedButton(
+                      onPressed: stopCallback,
+                      child: new Text("Stop Drive"),
+                      color: Theme.of(context).buttonColor
+                    )
+                  ]
+                ),
+                new DropdownButton<num>(
+                  value: _supervisorIndex,
+                  items: supervisorItems,
+                  /// When user selects supervisor,
+                  /// update _supervisorIndex.
+                  onChanged: (num index) {
+                    setState(() { _supervisorIndex = index; });
+                  }
+                )
+              ]
+            )
+          ),
+          new Card(
+            child: new Column(
+              children: goalTextObjs,
+            )
+          )
+        ]
+      )
+    );
   }
 
   /// When we are done with this widget, cancel the subscriptions.
@@ -361,6 +402,7 @@ class _HomeViewState extends State<HomeView> {
     _goalSubscription?.cancel();
     _supervisorModel.cancelSubscriptions();
     _logModel.cancelSubscriptions();
+    _learnerModel.cancelSubscriptions();
     super.dispose();
   }
 }

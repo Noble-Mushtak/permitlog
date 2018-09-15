@@ -28,11 +28,11 @@ enum _SignInOptions {
 /// Enum representing the different tabs in the drawer.
 enum _PermitLogTabs {
   home,
-  log,
   supervisors,
   learners,
-  about,
-  goals
+  log,
+  goals,
+  about
 }
 
 /// Main function, creates a new [MaterialApp] whose home widget is [PermitLog].
@@ -84,10 +84,6 @@ class _PermitLogState extends State<PermitLog> {
           this._title = "Home";
           this._content = new HomeView();
           break;
-        case _PermitLogTabs.log:
-          this._title = "Log";
-          this._content = new LogView();
-          break;
         case _PermitLogTabs.supervisors:
           this._title = "Supervisors";
           this._content = new SupervisorsView();
@@ -96,13 +92,17 @@ class _PermitLogState extends State<PermitLog> {
           this._title = "Learners";
           this._content = new LearnersView();
           break;
-        case _PermitLogTabs.about:
-          this._title = "About";
-          this._content = new AboutView();
+        case _PermitLogTabs.log:
+          this._title = "Log";
+          this._content = new LogView();
           break;
         case _PermitLogTabs.goals:
           this._title = "Goals";
           this._content = new GoalsView();
+          break;
+        case _PermitLogTabs.about:
+          this._title = "About";
+          this._content = new AboutView();
           break;
         default:
           break;
@@ -323,7 +323,7 @@ class _PermitLogState extends State<PermitLog> {
             child: new Text("Add Drive Log"),
             /// Navigate to AddLogView
             onPressed: () {
-            _navigateRoute(outerContext, (context) => new AddLogView());
+              _navigateRoute(outerContext, (context) => new AddLogView());
             }
           )
         ],
@@ -375,11 +375,6 @@ class _PermitLogState extends State<PermitLog> {
                 onTap: () => this._navTo(_PermitLogTabs.home, fromDrawer: true),
               ),
               new ListTile(
-                leading: new Icon(Icons.assignment, color: Colors.white,),
-                title: new Text("Log", style: this._menuText,),
-                onTap: () => this._navTo(_PermitLogTabs.log, fromDrawer: true),
-              ),
-              new ListTile(
                 leading: new Icon(Icons.supervisor_account, color: Colors.white,),
                 title: new Text("Supervisors", style: this._menuText,),
                 onTap: () => this._navTo(_PermitLogTabs.supervisors, fromDrawer: true),
@@ -388,6 +383,11 @@ class _PermitLogState extends State<PermitLog> {
                 leading: new Icon(Icons.person, color: Colors.white,),
                 title: new Text("Learners", style: this._menuText,),
                 onTap: () => this._navTo(_PermitLogTabs.learners, fromDrawer: true)
+              ),
+              new ListTile(
+                leading: new Icon(Icons.assignment, color: Colors.white,),
+                title: new Text("Log", style: this._menuText,),
+                onTap: () => this._navTo(_PermitLogTabs.log, fromDrawer: true),
               ),
               new ListTile(
                 leading: new Icon(Icons.settings, color: Colors.white,),

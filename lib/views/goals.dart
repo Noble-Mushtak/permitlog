@@ -6,6 +6,8 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permitlog/driving_times.dart';
+import 'package:permitlog/utilities.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// View that allows the user to change their goals.
 class GoalsView extends StatefulWidget {
@@ -43,19 +45,23 @@ class _GoalsViewState extends State<GoalsView> {
   /// Firebase API Interfaces
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseDatabase _data = FirebaseDatabase.instance;
+  /// Object used to edit preferences.
+  SharedPreferences _prefs;
   /// Subscription for listening to changes in user.
   StreamSubscription<FirebaseUser> _authSubscription;
   /// Subscription for listening to changes in user's goals.
   StreamSubscription<Event> _goalSubscription;
-  /// Reference to the user's Firebase data.
-  DatabaseReference _userRef;
+  /// Reference to the user's and learner's Firebase data.
+  DatabaseReference _userRef, _learnerRef;
+  /// Key for current learner (empty for default learner).
+  String _currentLearnerKey;
 
   @override
   void initState() {
     super.initState();
     /// Subscribe to changes to authentication.
     _authSubscription = _auth.onAuthStateChanged.listen(_updateUser);
-    /// Initialize _formKey
+    /// Initialize _formKey.
     _formKey = new GlobalKey<FormState>();
   }
 
@@ -63,6 +69,10 @@ class _GoalsViewState extends State<GoalsView> {
   Future<void> _updateUser(FirebaseUser user) async {
     /// Cancel all subscriptions.
     await _goalSubscription?.cancel();
+    /// Initialize _prefs if necessary.
+    if (_prefs == null) {
+      _prefs = await SharedPreferences.getInstance();
+    }
     setState(() {
       /// Reset the variables related to the user.
       _userRef = null;
@@ -72,8 +82,11 @@ class _GoalsViewState extends State<GoalsView> {
       /// If the user is non-null, update _userRef.
       if (user != null) {
         _userRef = _data.reference().child(user.uid);
-        /// Also, start the subscriptions.
-        _goalSubscription = _userRef.child("goals").onValue.listen(_goalsListener);
+        /// Update _currentLearnerKey, _learnerRef.
+        _currentLearnerKey = _prefs.getString("current_learner") ?? "";
+        _learnerRef = getCurrentLearnerRef(_userRef, _currentLearnerKey);
+        /// Start listening to new goals.
+        _goalSubscription = _learnerRef.child("goals").onValue.listen(_goalsListener);
       }
     });
   }
@@ -129,12 +142,12 @@ class _GoalsViewState extends State<GoalsView> {
 
   /// Called when user clicks save.
   void _saveGoals() {
-    /// Don't do anything if the user is signed in
-    /// or if they haven't selected a state.
-    if (_userRef == null) return;
+    /// Don't do anything if the user is not signed in
+    /// or if the current learner is unknown.
+    if (_learnerRef == null) return;
     /// Don't do anything if form validation fails
     if (!_formKey.currentState.validate()) return;
-
+    /// Show user a warning if a state is not selected.
     if (!_stateData.containsKey(_stateSelected)) {
       Scaffold.of(context).showSnackBar(new SnackBar(
         content: new Text("Please select a state.")
@@ -142,7 +155,7 @@ class _GoalsViewState extends State<GoalsView> {
       return;
     }
     /// Save the user's state and goals.
-    DatabaseReference goalsRef = _userRef.child("goals");
+    DatabaseReference goalsRef = _learnerRef.child("goals");
     goalsRef.child("stateName").set(_stateSelected);
     for (String type in DrivingTimes.TIME_TYPES) {
       /// If the goal is not an integer for some reason, set it to 0.

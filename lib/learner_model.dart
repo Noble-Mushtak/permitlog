@@ -27,14 +27,18 @@ class LearnerModel {
   /// onValue callback for default learner.
   void _defaultLearnerChanged(Event event) {
     /// Update default learner's name if it is complete.
+    bool completeName = false;
     if (event.snapshot.value is Map) {
       Map name = event.snapshot.value;
       if (name.containsKey("first") && name.containsKey("last")) {
-        learnerNames[0] = name["first"]+" "+name["last"];
-        /// Notify the widget.
-        _notifyDataChanged(learnerIds, learnerNames);
+        learnerNames[0] = name["first"] + " " + name["last"];
+        completeName = true;
       }
     }
+    /// If name is incomplete, just use "Default Learner".
+    if (!completeName) learnerNames[0] = "Default Learner";
+    /// Notify the widget of changes.
+    _notifyDataChanged(learnerIds, learnerNames);
   }
   /// onChildAdded callback for learner data.
   void _learnerAdded(Event event) {
