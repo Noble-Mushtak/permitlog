@@ -39,6 +39,9 @@ class _HomeViewState extends State<HomeView> {
   /// Object that holds all of the user's goals.
   /// These times are stored in hours.
   DrivingTimes _userGoals = new DrivingTimes();
+  /// True if onValue event listener for goals has fired at least once
+  /// for the current user.
+  bool _goalsFound = false;
   /// Subscription that listens for changes to user's goal data.
   StreamSubscription<Event> _goalSubscription;
   /// Model that manages all of the supervisor data.
@@ -54,22 +57,28 @@ class _HomeViewState extends State<HomeView> {
   int _supervisorIndex = 0;
   /// Key and name of current learner (key is empty if default learner).
   String _currentLearnerKey, _currentLearnerName = "";
-  /// Boolean describing if there is an ongoing drive.
-  bool _ongoingDrive = false;
-  /// Reference to the user's ongoing drive.
-  DatabaseReference _ongoingRef;
   /// Objects that store starting and ending time of ongoing drive.
   DateTime _startingTime, _endingTime;
   /// Duration of time from _startingTime to now.
   Duration _ongoingDuration;
   /// Timer that updates ongoing drive time.
   Timer _ongoingTimer;
+  /// True if _ongoingTimer is running.
+  bool _timerRunning = false;
+  /// True if dialog about ongoing drive is currently being shown.
+  bool _dialogShowing = false;
 
   /// Tells user to add supervisor.
   void _supervisorWarning() {
     Scaffold.of(context).showSnackBar(new SnackBar(
         content: new Text("Please add the supervisor accompanying you by tapping the button in the bottom right"),
         duration: new Duration(seconds: 5),
+    ));
+  }
+  /// Warns user something has gone wrong with preferences.
+  void _preferencesWarning() {
+    Scaffold.of(context).showSnackBar(new SnackBar(
+      content: new Text("Something went wrong when trying to start or stop drive in preferences."),
     ));
   }
 
@@ -85,18 +94,15 @@ class _HomeViewState extends State<HomeView> {
       _prefs = await SharedPreferences.getInstance();
     }
     setState(() {
-      /// Reset any variables related to Firebase data.
-      _ongoingDrive = false;
-
       /// Update _curUser.
       _curUser = user;
+      /// Reset other user-related vairables.
+      _goalsFound = false;
       /// If _curUser is null, then _userRef is null.
       if (_curUser == null) _userRef = null;
       /// Otherwise, if we know who the user is, update _userRef:
       else {
         _userRef = _data.reference().child(_curUser.uid);
-        /// Update any other DatabaseReferences.
-        _ongoingRef = _userRef.child("ongoing");
         /// Start listening to supervisor data.
         _supervisorModel = new SupervisorModel(
           userRef: _userRef,
@@ -143,13 +149,15 @@ class _HomeViewState extends State<HomeView> {
 
   /// Callback for when new data about the goals come in.
   void _goalsListener(Event event) {
-    /// Update _userGoals with the event.
     setState(() {
+      /// Update _userGoals with the event.
       _userGoals.updateWithEvent(event);
+      /// Set _goalsFound flag.
+      _goalsFound = true;
     });
   }
   /// Callback for when user clicks "Start Drive".
-  void _startDrive() {
+  void _startDrive() async {
     /// If there are no supervisors, tell the user to add a supervisor.
     if (_supervisorModel.supervisorData.isEmpty) {
       _supervisorWarning();
@@ -157,48 +165,70 @@ class _HomeViewState extends State<HomeView> {
     }
     /// Otherwise, start the ongoing drive.
     else {
-      setState(() {
-        _ongoingDrive = true;
-        /// Set the _startingTime and save it in Firebase.
-        _startingTime = new DateTime.now();
-        _ongoingRef.child("start").set(_startingTime.millisecondsSinceEpoch);
-        /// Initialize _ongoingDuration.
-        _ongoingDuration = new Duration(seconds: 0);
-        /// Start the timer.
-        _ongoingTimer = new Timer.periodic(new Duration(seconds: 1), _updateOngoing);
-      });
+      /// Set the _startingTime.
+      _startingTime = new DateTime.now();
+      /// Initialize _ongoingDuration.
+      _ongoingDuration = new Duration(seconds: 0);
+      /// Mark that drive has started in the preferences.
+      bool success = await _prefs.setBool("drive_ongoing", true);
+      success = success && (await _prefs.setInt("drive_start_time", _startingTime.millisecondsSinceEpoch));
+      /// Show error message if there is an error setting preferences.
+      if (!success) {
+        _preferencesWarning();
+        return;
+      }
+
+      /// Start the timer and update UI.
+      setState(_startTimer);
     }
   }
-  /// Callback for _ongoingTimer.
-  void _updateOngoing(Timer timer) {
-    setState(() {
-      /// Find the duration between _startingTime and now.
-      _ongoingDuration = (new DateTime.now()).difference(_startingTime);
+  /// Starts the timer.
+  void _startTimer() {
+    /// Set _timerRunning flag.
+    _timerRunning = true;
+    /// Make the timer run a function every second.
+    _ongoingTimer = new Timer.periodic(new Duration(seconds: 1), (_) {
+      setState(_updateOngoingDuration);
     });
   }
+  /// Updates _ongoingDuration variable.
+  void _updateOngoingDuration() {
+    /// Update the duration between _startingTime and now.
+    _ongoingDuration = (new DateTime.now()).difference(_startingTime);
+  }
   /// Callback for when user clicks "Stop Drive".
-  void _stopDrive() {
-    setState(() {
-      /// Cancel the timer and stop the ongoing drive.
-      _ongoingTimer.cancel();
-      _ongoingDrive = false;
-    });
+  void _stopDrive() async {
     /// If there are no supervisors, tell the user to add a supervisor.
     if (_supervisorModel.supervisorData.isEmpty) {
       _supervisorWarning();
       return;
     }
-    /// Save the supervisor ID in Firebase.
+    /// Save the supervisor ID in preferences.
     String supervisorId = _supervisorModel.supervisorIds[_supervisorIndex];
-    _ongoingRef.child("driver_id").set(supervisorId);
+    bool success = await _prefs.setString("drive_supervisor", supervisorId);
     /// Save the stop time in Firebase.
     _endingTime = new DateTime.now();
-    _ongoingRef.child("end").set(_endingTime.millisecondsSinceEpoch);
+    success = success && (await _prefs.setInt("drive_end_time", _endingTime.millisecondsSinceEpoch));
+    /// Show error message if there is an error setting preferences.
+    if (!success) {
+      _preferencesWarning();
+      return;
+    }
+
     /// Show dialog about drive so user can save drive.
-    _showDialog(supervisorId);
+    _dialogShowing = true;
+    /// It is important that setState() comes after setting flag so build()
+    /// does not accidentally restart timer or start duplicate dialog.
+    setState(() {
+      /// Unset _timerRunning flag.
+      _timerRunning = false;
+      /// Cancel the timer.
+      _ongoingTimer.cancel();
+    });
+    await _showDialog(supervisorId);
   }
   /// Shows dialog allowing user to put drive into categories.
-  void _showDialog(String supervisorId) {
+  Future<void> _showDialog(String supervisorId) async {
     /// This is a list of Booleans representing the drive's categories.
     /// driveCategories[0] is true iff this drive was during night.
     /// driveCategories[1] is for poor weather, 2 for adverse conditions.
@@ -226,66 +256,127 @@ class _HomeViewState extends State<HomeView> {
       categoryCheckboxes.add(createCheckbox("Adverse Conditions", 2));
     }
     /// If none of the categories applied, then just save the drive already.
-    if (categoryCheckboxes.isEmpty) _saveDrive(driveCategories, supervisorId);
+    if (categoryCheckboxes.isEmpty) {
+      _saveDrive(driveCategories, supervisorId);
+      /// We never actually showed the dialog, so unset _dialogShowing flag.
+      _dialogShowing = false;
+    }
     /// Otherwise, show the user a dialog
     /// so they can choose which categories apply here.
     else {
       /// For the dialog's content, prepend the checkboxes with some text.
       List<Widget> content = <Widget>[new Text("Select all that apply.")];
       content += categoryCheckboxes;
-      /// Now, show the dialog.
-      showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext innerContext) => new AlertDialog(
-          content: new Column(mainAxisSize: MainAxisSize.min, children: content),
-          actions: <Widget>[
-            new FlatButton(
-              child: new Text("Cancel"),
-              /// Delete the ongoing drive and show the user a failure message
-              /// if the user clicks cancel.
-              onPressed: () {
-                _ongoingRef.remove();
-                Scaffold.of(context).showSnackBar(new SnackBar(
-                  content: new Text("Drive cancelled.")
-                ));
-                Navigator.pop(innerContext);
-              },
-            ),
-            new FlatButton(
-              child: new Text("Save"),
-              onPressed: () {
-                _saveDrive(driveCategories, supervisorId);
-                Navigator.pop(innerContext);
-              }
+      /// Now, keep trying to show the dialog until it works.
+      while (_dialogShowing) {
+        /// Await 100 milliseconds in between each attempt.
+        await new Future.delayed(new Duration(milliseconds: 100));
+        try {
+          await showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext innerContext) => new AlertDialog(
+              content: new Column(mainAxisSize: MainAxisSize.min, children: content),
+              actions: <Widget>[
+                new FlatButton(
+                  child: new Text("Cancel"),
+                  /// Show error message if the user clicks cancel.
+                  onPressed: () async {
+                    /// Mark that drive has ended in preferences.
+                    bool success = await resetPreferences();
+                    /// Show a different error message if setting preferences fails.
+                    String message = "Drive cancelled.";
+                    if (!success) {
+                      message = "Cancelling drive failed.";
+                    }
+                    /// Show error message.
+                    Scaffold.of(context).showSnackBar(new SnackBar(
+                      content: new Text(message)
+                    ));
+                    /// Exit the dialog if setting preferences succeeded.
+                    if (success) setState(() {
+                      /// Unset _dialogShowing flag.
+                      _dialogShowing = false;
+                      Navigator.pop(innerContext);
+                    });
+                  },
+                ),
+                new FlatButton(
+                  child: new Text("Save"),
+                  onPressed: () async {
+                    /// Try to save the drive.
+                    bool success = await _saveDrive(driveCategories, supervisorId);
+                    /// Exit the dialog if save is successful.
+                    if (success) setState(() {
+                      /// Unset _dialogShowing flag.
+                      _dialogShowing = false;
+                      Navigator.pop(innerContext);
+                    });
+                  }
+                )
+              ]
             )
-          ]
-        )
-      );
+          );
+        }
+        /// Print any errors from showDialog() to console.
+        /// The most likely error is that there is still a build going on,
+        /// which will eventually go away after enough attempts.
+        catch (e) {
+         print(e.toString());
+        }
+      }
     }
   }
   /// Saves drive with _startingTime and _endingTime.
-  void _saveDrive(List<bool> categories, String supervisorId) {
-    /// Delete the ongoing drive since the drive has finished.
-    _ongoingRef.remove();
+  Future<bool> _saveDrive(List<bool> categories, String supervisorId) async {
     /// Set endingTime so the difference in times is exact in minutes.
     _ongoingDuration = _endingTime.difference(_startingTime);
     int msDifference = _ongoingDuration.inMicroseconds % Duration.microsecondsPerMinute;
     _endingTime = _endingTime.subtract(new Duration(microseconds: msDifference));
-    /// Save the drive in the database.
+    /// Create a new drive in the database.
     DatabaseReference driveRef = _learnerRef.child("times").push();
-    driveRef.set(<String, dynamic>{
-      "start": _startingTime.millisecondsSinceEpoch,
-      "end": _endingTime.millisecondsSinceEpoch,
-      "night": categories[0],
-      "weather": categories[1],
-      "adverse": categories[2],
-      "driver_id": supervisorId
-    });
-    /// Show the user a success message.
+
+    /// This is the success/error message we will show the user.
+    String message = "Drive successfully saved.";
+    /// This is false if some error occurs below.
+    bool success = true;
+    try {
+      /// Save the drive in database.
+      await driveRef.set(<String, dynamic>{
+        "start": _startingTime.millisecondsSinceEpoch,
+        "end": _endingTime.millisecondsSinceEpoch,
+        "night": categories[0],
+        "weather": categories[1],
+        "adverse": categories[2],
+        "driver_id": supervisorId
+      });
+      /// Stop drive in preferences.
+      success = await resetPreferences();
+      /// Show user error message if preference editing fails.
+      if (!success) {
+        message = "Drive saved successfully, but cancelling drive failed.";
+      }
+    } catch (e) {
+      /// Show user error message, return false for failure.
+      message = "Error occurred while saving drive.";
+      success = false;
+    }
+    /// Update UI and show user success/error message.
     Scaffold.of(context).showSnackBar(new SnackBar(
-        content: new Text("Drive successfully saved."),
+      content: new Text(message)
     ));
+    /// Return true for success, false for failure.
+    return success;
+  }
+
+  /// Resets preferences related to ongoing drive.
+  Future<bool> resetPreferences() async {
+    /// Set drive_ongoing to false, remove all other preferences.
+    bool success = await _prefs.setBool("drive_ongoing", false);
+    success = success && (await _prefs.remove("drive_start_time"));
+    success = success && (await _prefs.remove("drive_end_time"));
+    success = success && (await _prefs.remove("drive_supervisor"));
+    return success;
   }
 
   @override
@@ -307,12 +398,45 @@ class _HomeViewState extends State<HomeView> {
     final NumberFormat twoDigitFormat = new NumberFormat("00");
     VoidCallback startCallback, stopCallback;
     String ongoingLabel = "00:00:00";
-    /// If we know who the user is:
-    if (_curUser != null) {
+    /// If we know who the user is and what their goals are:
+    if ((_curUser != null) && _goalsFound) {
       /// Enable the stop button if there is an ongoing drive.
-      if (_ongoingDrive) {
+      if (_prefs.getBool("drive_ongoing") ?? false) {
         stopCallback = _stopDrive;
-        /// Also, update ongoingLabel using _ongoingDuration.
+
+        /// Get other data from preferences.
+        int startingTimeMillis = _prefs.getInt("drive_start_time");
+        int endingTimeMillis = _prefs.getInt("drive_end_time");
+        String supervisorId = _prefs.getString("drive_supervisor");
+        /// For Debug:
+        /// print(startingTimeMillis.toString()+" "+endingTimeMillis.toString()+" "+supervisorId.toString());
+
+        /// Update _startingTime if possible.
+        if (startingTimeMillis != null) {
+          _startingTime = new DateTime.fromMillisecondsSinceEpoch(startingTimeMillis);
+          /// If drive has been finished, but not saved:
+          if ((endingTimeMillis != null) && (supervisorId != null)) {
+            /// Update _endingTime and _ongoingDuration.
+            _endingTime = new DateTime.fromMillisecondsSinceEpoch(endingTimeMillis);
+            _ongoingDuration = _endingTime.difference(_startingTime);
+            /// Show dialog if not already showing.
+            if (!_dialogShowing) {
+              _dialogShowing = true;
+              _showDialog(supervisorId);
+            }
+          }
+          /// If drive has not been finished:
+          else {
+            /// Update _ongoingDuration and start timer
+            /// if the timer's not running already.
+            if (!_timerRunning) {
+              _updateOngoingDuration();
+              _startTimer();
+            }
+          }
+        }
+
+        /// Update ongoingLabel using _ongoingDuration.
         int minutes = _ongoingDuration.inMinutes % Duration.minutesPerHour;
         int seconds = _ongoingDuration.inSeconds % Duration.secondsPerMinute;
         ongoingLabel = "${_ongoingDuration.inHours}:"+
@@ -395,7 +519,7 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  /// When we are done with this widget, cancel the subscriptions.
+  /// When we are done with this widget, cancel the timers/subscriptions.
   @override
   void dispose() {
     _authSubscription.cancel();
@@ -403,6 +527,7 @@ class _HomeViewState extends State<HomeView> {
     _supervisorModel.cancelSubscriptions();
     _logModel.cancelSubscriptions();
     _learnerModel.cancelSubscriptions();
+    _ongoingTimer?.cancel();
     super.dispose();
   }
 }

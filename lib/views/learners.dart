@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:permitlog/learner_model.dart';
-import 'package:permitlog/utilities.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// View that lists the different learners.
@@ -90,8 +89,13 @@ class _LearnersViewState extends State<LearnersView> {
         child: new ListTile(
           title: new Text(_learnerNames[i]),
           /// Set this learner as currently selected when the name is tapped.
-          onTap: () {
-            setState(() { _prefs?.setString("current_learner", learnerId); });
+          onTap: () async {
+            bool success = await _prefs?.setString("current_learner", learnerId);
+            /// Rebuild widget if preferences are set successfully.
+            if (success) setState(() {});
+            else Scaffold.of(context).showSnackBar(new SnackBar(
+              content: new Text("Error when trying to change current learner.")
+            ));
           },
           trailing: new FlatButton(
             child: new Icon(Icons.edit, color: Colors.black),
