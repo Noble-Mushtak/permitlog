@@ -1,7 +1,7 @@
 # permitlog
 ![App Screenshot](https://github.com/brianjaustin/permitlog/blob/master/screenshots/permitlog-flutter-homepage.png)
 
-This repository holds the Flutter code for version 2 of Permit Log, an app to help learner&#x27;s permit holders track their driving. We developed this app as part of the [2017 Maine App Challenge](https://www.businesswire.com/news/home/20170424005095/en/Tyler-Technologies-Announces-2017-Maine-App-Challenge). While the original version of Permit Log is available on [Google Play](https://play.google.com/store/apps/details?id=team.tr.permitlog), version 2 is compatible with both Android and iOS, so it will be available on both Google Play and the App Store. However, for now, version 2 is still in development and has not been released yet.
+This repository holds the Flutter code for version 2 of Permit Log, an app to help learner&#x27;s permit holders track their driving. We developed this app as part of the [2017 Maine App Challenge](https://web.archive.org/web/20170721000919/https://www.tylertech.com/maine-app-challenge-2017). While the original version of Permit Log is available on [Google Play](https://play.google.com/store/apps/details?id=team.tr.permitlog), version 2 is compatible with both Android and iOS, so it will be available on both Google Play and the App Store. However, for now, version 2 is still in development and has not been released yet.
 
 To see the repository for version 1 of Permit Log, see the [permitlog-android repo](https://github.com/brianjaustin/permitlog-android).
 
