@@ -454,7 +454,7 @@ class _HomeViewState extends State<HomeView> {
       new Text("Time Completed", style: textTheme.headline)
     ];
     /// Loop through the goal types.
-    for (String type in DrivingTimes.TIME_TYPES) {
+    for (String type in DrivingTimes.types) {
       /// If the user has this goal:
       if (_userGoals.getTime(type) > 0) {
         /// Capitalize the goal type:

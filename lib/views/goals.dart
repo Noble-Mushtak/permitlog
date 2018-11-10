@@ -157,7 +157,7 @@ class _GoalsViewState extends State<GoalsView> {
     /// Save the user's state and goals.
     DatabaseReference goalsRef = _learnerRef.child("goals");
     goalsRef.child("stateName").set(_stateSelected);
-    for (String type in DrivingTimes.TIME_TYPES) {
+    for (String type in DrivingTimes.types) {
       /// If the goal is not an integer for some reason, set it to 0.
       goalsRef.child(type).set(int.tryParse(_textControllers[type]?.text ?? "") ?? 0);
     }
@@ -181,7 +181,7 @@ class _GoalsViewState extends State<GoalsView> {
     List<TextFormField> goalInputs = [];
     /// Only add goal inputs if a state has been selected.
     if (_stateData.containsKey(_stateSelected)) {
-      for (String type in DrivingTimes.TIME_TYPES) {
+      for (String type in DrivingTimes.types) {
         /// Get the goal of this type for this state.
         int goal = _stateData[_stateSelected][type];
         /// However, if this is the Custom state or the user's own state,

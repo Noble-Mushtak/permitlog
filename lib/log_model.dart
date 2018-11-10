@@ -114,7 +114,7 @@ class LogModel {
     await _logList.cancelSubscriptions();
     /// Clear logData and the DrivingTimes object.
     logData.clear();
-    for (String type in DrivingTimes.TIME_TYPES) timeElapsed.setTime(type, 0);
+    for (String type in DrivingTimes.types) timeElapsed.setTime(type, 0);
     /// Reset logSummaries.
     logSummaries.clear();
     logSummaries.add("No logs");
