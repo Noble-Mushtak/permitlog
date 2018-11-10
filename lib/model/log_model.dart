@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
-import 'package:permitlog/driving_times.dart';
+import 'package:permitlog/model/driving_times.dart';
 import 'package:permitlog/safe_firebase_list.dart';
 import 'package:permitlog/utilities.dart';
 

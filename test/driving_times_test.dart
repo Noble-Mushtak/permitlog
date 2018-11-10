@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
 
-import 'package:permitlog/driving_times.dart';
+import 'package:permitlog/model/driving_times.dart';
 
 void main() {
   DrivingTimes dt1, dt2;

@@ -4,7 +4,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:permitlog/views/add_supervisor.dart';
-import 'package:permitlog/supervisor_model.dart';
+import 'package:permitlog/model/supervisor_model.dart';
 import 'package:permitlog/utilities.dart';
 
 /// View tethat lists supervising drivers.

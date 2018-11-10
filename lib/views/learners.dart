@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:permitlog/learner_model.dart';
+import 'package:permitlog/model/learner_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// View that lists the different learners.

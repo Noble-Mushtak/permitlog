@@ -4,8 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:permitlog/driving_times.dart';
-import 'package:permitlog/supervisor_model.dart';
+import 'package:permitlog/model/driving_times.dart';
+import 'package:permitlog/model/supervisor_model.dart';
 import 'package:permitlog/utilities.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

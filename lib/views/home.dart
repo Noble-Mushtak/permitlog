@@ -5,11 +5,11 @@ import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:permitlog/driving_times.dart';
-import 'package:permitlog/learner_model.dart';
-import 'package:permitlog/log_model.dart';
+import 'package:permitlog/model/driving_times.dart';
+import 'package:permitlog/model/learner_model.dart';
+import 'package:permitlog/model/log_model.dart';
 import 'package:permitlog/views/stateful_checkbox.dart';
-import 'package:permitlog/supervisor_model.dart';
+import 'package:permitlog/model/supervisor_model.dart';
 import 'package:permitlog/utilities.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
