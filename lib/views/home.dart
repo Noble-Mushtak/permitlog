@@ -471,51 +471,60 @@ class _HomeViewState extends State<HomeView> {
     /// Also, make sure _supervisorIndex is a valid index of _supervisorNames.
     _supervisorIndex = min(_supervisorIndex, _supervisorNames.length-1);
 
-    return new SingleChildScrollView(
-      child: new Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          new Card(
-            child: new Text("Hello, $_currentLearnerName", textAlign: TextAlign.center, style: textTheme.headline,)
-          ),
-          new Card(
-            child: new Column(
-              children: <Widget>[
-                new Text(ongoingLabel, textAlign: TextAlign.center, style: textTheme.headline),
-                new Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    new RaisedButton(
-                      onPressed: startCallback,
-                      child: new Text("Start Drive"),
-                      color: Theme.of(context).buttonColor
-                    ),
-                    new RaisedButton(
-                      onPressed: stopCallback,
-                      child: new Text("Stop Drive"),
-                      color: Theme.of(context).buttonColor
-                    )
-                  ]
-                ),
-                new DropdownButton<num>(
-                  value: _supervisorIndex,
-                  items: supervisorItems,
-                  /// When user selects supervisor,
-                  /// update _supervisorIndex.
-                  onChanged: (num index) {
-                    setState(() { _supervisorIndex = index; });
-                  }
-                )
-              ]
+    return Padding(
+      padding: const EdgeInsets.only(top:16, left:16, right:16),
+      child: new SingleChildScrollView(
+        child: new Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            new Card(
+              child: new Text("Hello, $_currentLearnerName", textAlign: TextAlign.center, style: textTheme.headline,)
+            ),
+            new Card(
+              child: new Column(
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.only(top:8.0),
+                    child: new Text(ongoingLabel, textAlign: TextAlign.center, style: textTheme.headline),
+                  ),
+                  new Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: new RaisedButton(
+                          onPressed: startCallback,
+                          child: new Text("Start Drive"),
+                          color: Theme.of(context).buttonColor
+                        ),
+                      ),
+                      new RaisedButton(
+                        onPressed: stopCallback,
+                        child: new Text("Stop Drive"),
+                        color: Theme.of(context).buttonColor
+                      )
+                    ]
+                  ),
+                  new DropdownButton<num>(
+                    value: _supervisorIndex,
+                    items: supervisorItems,
+                    /// When user selects supervisor,
+                    /// update _supervisorIndex.
+                    onChanged: (num index) {
+                      setState(() { _supervisorIndex = index; });
+                    }
+                  )
+                ]
+              )
+            ),
+            new Card(
+              child: new Column(
+                children: goalTextObjs,
+              )
             )
-          ),
-          new Card(
-            child: new Column(
-              children: goalTextObjs,
-            )
-          )
-        ]
-      )
+          ]
+        )
+      ),
     );
   }
 

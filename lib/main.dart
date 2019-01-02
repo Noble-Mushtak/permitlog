@@ -41,6 +41,18 @@ void main() {
     new MaterialApp(
       home: new PermitLog(),
       title: 'PermitLog',
+      theme: ThemeData(
+        // Define the default Brightness and Colors
+        brightness: Brightness.light,
+        primaryColor: Color(0xFF3F51B5),
+        accentColor: Color(0xFFFF5722),
+        buttonColor: Color(0xFFFF5722),
+        // Define the default Font Family
+        //fontFamily: 'Montserrat',
+        buttonTheme: ButtonThemeData(
+          buttonColor: Color(0xFFFF5722),
+        ) //Todo: Any way to have this be accentColor instead of just copying it?
+        ),
     )
   );
 }
@@ -352,7 +364,7 @@ class _PermitLogState extends State<PermitLog> {
     return new Scaffold(
       appBar: new AppBar(
         title: new Text(this._title),
-        backgroundColor: Colors.blueAccent,
+        //backgroundColor: Colors.blue,
       ),
       /// Authenticate the user inside a Builder
       /// so that the context has access to the Scaffold.
@@ -366,7 +378,7 @@ class _PermitLogState extends State<PermitLog> {
       ),
       drawer: new Drawer(
         child: new Container(
-          color: Colors.blueAccent,
+          color: Theme.of(context).primaryColor,
           child: new ListView(
             children: <Widget>[
               new ListTile(
