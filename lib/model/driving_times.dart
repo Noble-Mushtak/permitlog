@@ -26,7 +26,7 @@ class DrivingTimes {
   int getTime(String type) {
     int typeIndex = types.indexOf(type);
     if (typeIndex == -1) {
-      throw new ArgumentError("Invalid driving time type: " + type);
+      throw ArgumentError("Invalid driving time type: " + type);
     }
     return _drivingTimes[typeIndex];
   }
@@ -36,10 +36,10 @@ class DrivingTimes {
   void setTime(String type, int time) {
     int typeIndex = types.indexOf(type);
     if (typeIndex == -1) {
-      throw new ArgumentError("Invalid driving time type: " + type);
+      throw ArgumentError("Invalid driving time type: " + type);
     }
     if (time < 0) {
-      throw new ArgumentError("Driving time must be non-negative.");
+      throw ArgumentError("Driving time must be non-negative.");
     }
 
     _drivingTimes[typeIndex] = time;
@@ -54,7 +54,7 @@ class DrivingTimes {
   /// the user's goals.
   void updateWithEvent(Event event) {
     // Get the data and go through every type of goal.
-    Map data = event.snapshot.value ?? new Map();
+    Map data = event.snapshot.value ?? Map();
 
     for (String type in DrivingTimes.types) {
       if (data.containsKey(type))
