@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 /// Throws an [ArgumentError] if the number of milliseconds is negative.
 String formatMilliseconds(int milliseconds) {
   if (milliseconds < 0) {
-    throw new ArgumentError("Number of milliseconds must be positive.");
+    throw ArgumentError("Number of milliseconds must be positive.");
   }
   NumberFormat twoDigitFormat = new NumberFormat("00");
   Duration duration = new Duration(milliseconds: milliseconds);
@@ -15,8 +15,11 @@ String formatMilliseconds(int milliseconds) {
 }
 
 /// Gets reference to data for current learner.
-DatabaseReference getCurrentLearnerRef(
-    DatabaseReference userRef, String learnerKey) {
+DatabaseReference getCurrentLearnerRef(DatabaseReference userRef,
+    String learnerKey) {
+  if (userRef == null) {
+    throw ArgumentError("Invalid user database reference.");
+  }
   // If this is the default learner, just return userRef.
   if (learnerKey.isEmpty) return userRef;
   // Otherwise, return the appropriate subchild of learners.
